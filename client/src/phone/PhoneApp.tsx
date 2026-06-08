@@ -35,6 +35,15 @@ export function PhoneApp() {
     else socket.once("connect", tryRejoin);
   }, [initialCode, joined]);
 
+  // Leave the current game: forget this device's player id for the room and
+  // reload, which drops back to the enter-room-code screen with a fresh
+  // connection (no auto-rejoin).
+  const leave = () => {
+    if (!window.confirm("Leave this game?")) return;
+    if (joined) localStorage.removeItem(`catan_pid_${joined.roomCode}`);
+    window.location.reload();
+  };
+
   if (!joined) {
     return <JoinScreen initialCode={initialCode} onJoined={(rc, pid) => setJoined({ roomCode: rc, playerId: pid })} />;
   }
@@ -42,6 +51,9 @@ export function PhoneApp() {
   return (
     <div className="phone">
       {error && <div className="toast">{error}</div>}
+      <button className="leave-btn" onClick={leave}>
+        Leave
+      </button>
       {!game || game.phase === "lobby" ? (
         <PhoneLobby lobby={lobby} myId={joined.playerId} />
       ) : (
