@@ -173,7 +173,11 @@ function advanceSetup(game: InternalGame): void {
       return;
     }
   }
-  const next = game.players.find((p) => p.id === setup.order[setup.pointer]);
+  // Keep currentPlayerIndex pointed at whoever must place next, so the board
+  // and phones (which read currentPlayerIndex) show the right active player
+  // during the setup snake-draft.
+  game.currentPlayerIndex = game.players.findIndex((p) => p.id === setup.order[setup.pointer]);
+  const next = game.players[game.currentPlayerIndex];
   if (next) addLog(game, `${next.name} to place a settlement.`);
 }
 
