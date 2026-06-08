@@ -124,6 +124,9 @@ describe("port trade ratios", () => {
   it("uses 2:1 on a matching resource port", () => {
     const game = newGame();
     const woodPort = game.board.ports.find((p) => p.type === "wood")!;
+    // Keep only the wood port so a vertex shared with another (randomly placed)
+    // port can't change the expected ratios.
+    game.board.ports = [woodPort];
     game.buildings[woodPort.vertices[0]] = { type: "settlement", owner: "p1" };
     expect(bestTradeRatio(game, "p1", "wood")).toBe(2);
     expect(bestTradeRatio(game, "p1", "brick")).toBe(4);
@@ -134,6 +137,9 @@ describe("resource production", () => {
   it("gives a settlement 1 and a city 2 of the hex resource", () => {
     const game = newGame();
     const hex = game.board.hexes.find((h) => h.terrain !== "desert" && h.numberToken !== null)!;
+    // Isolate this hex so other (randomly placed) hexes with the same token
+    // can't contribute — the board is random, so make the scenario explicit.
+    for (const h of game.board.hexes) if (h.id !== hex.id) h.numberToken = null;
     game.robberHex = "999,999"; // move robber away
     game.buildings[hex.corners[0]] = { type: "settlement", owner: "p1" };
     game.buildings[hex.corners[2]] = { type: "city", owner: "p2" };
@@ -148,6 +154,7 @@ describe("resource production", () => {
   it("does not produce from the robber-occupied hex", () => {
     const game = newGame();
     const hex = game.board.hexes.find((h) => h.terrain !== "desert" && h.numberToken !== null)!;
+    for (const h of game.board.hexes) if (h.id !== hex.id) h.numberToken = null;
     game.robberHex = hex.id;
     game.buildings[hex.corners[0]] = { type: "settlement", owner: "p1" };
     produceResources(game, hex.numberToken!);
