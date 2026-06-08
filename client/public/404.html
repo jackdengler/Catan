@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <script>
+      // GitHub Pages serves this for unknown paths. The app uses query-param
+      // routing (?tv) so assets resolve under the repo subpath, but a natural
+      // "/tv" path 404s here — so map it to "/?tv" and send other unknown
+      // paths back to the app root.
+      (function () {
+        var path = location.pathname.replace(/\/+$/, "");
+        var parts = path.split("/");
+        var last = parts.pop();
+        var base = parts.join("/") + "/";
+        if (last === "tv") {
+          location.replace(base + "?tv" + location.hash);
+        } else {
+          location.replace(base + location.search + location.hash);
+        }
+      })();
+    </script>
+  </head>
+  <body>Redirecting…</body>
+</html>
