@@ -474,6 +474,11 @@ button.tiny {
 .error-msg {
   color: #ff9b9b;
 }
+.or-divider {
+  text-align: center;
+  color: var(--muted);
+  margin: 4px 0;
+}
 .claim-list {
   display: flex;
   flex-direction: column;

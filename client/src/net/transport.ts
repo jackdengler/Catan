@@ -6,7 +6,7 @@
 export type Handler = (...args: any[]) => void;
 
 // Wire message names. Outgoing (UI -> transport) vs incoming (transport -> UI).
-export type OutEvent = "room:create" | "tv:join" | "room:join" | "action";
+export type OutEvent = "room:create" | "tv:join" | "host:create" | "room:join" | "action";
 export type InEvent = "connect" | "disconnect" | "room:lobby" | "state" | "error" | "room:joined";
 
 export abstract class Transport {

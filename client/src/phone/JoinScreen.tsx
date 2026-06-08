@@ -129,6 +129,19 @@ export function JoinScreen({ initialCode, onJoined }: Props) {
       <button className="primary big" disabled={busy} onClick={join}>
         {busy ? "Joining…" : "Join game"}
       </button>
+
+      <div className="or-divider">or</div>
+      <button className="ghost big" onClick={playOnThisPhone}>
+        🎮 Play on this phone (vs bots)
+      </button>
     </div>
   );
+}
+
+// Switch this device into host-and-play mode.
+function playOnThisPhone() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("room");
+  url.searchParams.set("host", "1");
+  window.location.href = url.toString();
 }
