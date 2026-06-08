@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generateBoard } from "./board.js";
 import { buildGeometry } from "./coords.js";
-import { createGame } from "./state.js";
+import { createGame, toPublicState } from "./state.js";
 import {
   bestTradeRatio,
   canPlaceSettlement,
@@ -188,6 +188,71 @@ describe("setup turn order", () => {
     const v2 = firstLegalVertex(game);
     expect(applyAction(game, "p1", { type: "placeSettlement", vertexId: v2.id }).ok).toBe(false);
     expect(applyAction(game, "p2", { type: "placeSettlement", vertexId: v2.id }).ok).toBe(true);
+  });
+});
+
+describe("canonical board", () => {
+  it("never places two red (6/8) hexes next to each other", () => {
+    const isRed = (n: number | null) => n === 6 || n === 8;
+    for (let t = 0; t < 25; t++) {
+      const { layout } = generateBoard();
+      const byId = new Map(layout.hexes.map((h) => [h.id, h]));
+      for (const e of layout.edges) {
+        if (e.hexes.length !== 2) continue;
+        const [a, b] = e.hexes;
+        expect(isRed(byId.get(a)!.numberToken) && isRed(byId.get(b)!.numberToken)).toBe(false);
+      }
+    }
+  });
+
+  it("has one 2:1 port of each resource and four 3:1 ports", () => {
+    const { layout } = generateBoard();
+    const counts: Record<string, number> = {};
+    for (const p of layout.ports) counts[p.type] = (counts[p.type] ?? 0) + 1;
+    expect(counts.any).toBe(4);
+    for (const r of ["wood", "brick", "sheep", "wheat", "ore"]) expect(counts[r]).toBe(1);
+  });
+});
+
+describe("house rules", () => {
+  it("wins at the configured target victory points", () => {
+    const game = createGame(
+      "T",
+      [
+        { id: "p1", name: "A", color: "red", isHost: true, connected: true },
+        { id: "p2", name: "B", color: "blue", isHost: false, connected: true },
+      ],
+      { targetVictoryPoints: 2, randomizeOrder: false }
+    );
+    game.phase = "main";
+    game.hasRolled = true;
+    game.currentPlayerIndex = 0;
+    let placed = 0;
+    for (const v of game.board.vertices) {
+      if (placed >= 2) break;
+      if (!game.buildings[v.id] && canPlaceSettlement(game, "p1", v.id, false)) {
+        game.buildings[v.id] = { type: "settlement", owner: "p1" };
+        placed++;
+      }
+    }
+    const p1 = game.players.find((p) => p.id === "p1")!;
+    p1.resources.wood = 1;
+    p1.resources.brick = 1;
+    const owned = Object.keys(game.buildings).find((vid) => game.buildings[vid].owner === "p1")!;
+    const edge = game.vertexById.get(owned)!.edges.find((e) => !game.roads[e])!;
+    applyAction(game, "p1", { type: "buildRoad", edgeId: edge });
+    expect(game.winner).toBe("p1");
+  });
+
+  it("reveals hidden victory-point cards only once the game ends", () => {
+    const game = newGame();
+    const p1 = game.players[0];
+    p1.devCards.push({ type: "victory", boughtTurn: 1 });
+    const before = toPublicState(game).players.find((p) => p.id === p1.id)!.victoryPoints;
+    game.winner = p1.id;
+    game.phase = "ended";
+    const after = toPublicState(game).players.find((p) => p.id === p1.id)!.victoryPoints;
+    expect(after - before).toBe(1);
   });
 });
 

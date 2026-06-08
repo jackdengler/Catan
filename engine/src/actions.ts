@@ -11,6 +11,7 @@ import {
 import { rollDice } from "./dice.js";
 import {
   addLog,
+  armTurnTimer,
   currentPlayer,
   playerById,
   totalResources,
@@ -101,10 +102,11 @@ function isCurrent(game: InternalGame, actor: InternalPlayer): boolean {
 
 function checkWin(game: InternalGame): void {
   const p = currentPlayer(game);
-  if (totalVictoryPoints(game, p) >= VICTORY_POINTS_TO_WIN) {
+  if (totalVictoryPoints(game, p) >= game.options.targetVictoryPoints) {
     game.winner = p.id;
     game.phase = "ended";
-    addLog(game, `${p.name} wins the game!`);
+    game.turnEndsAt = null;
+    addLog(game, `${p.name} wins the game!`, p.id, true);
   }
 }
 
@@ -169,6 +171,7 @@ function advanceSetup(game: InternalGame): void {
       game.phase = "roll";
       game.currentPlayerIndex = 0;
       game.turnNumber = 1;
+      armTurnTimer(game);
       addLog(game, `${currentPlayer(game).name} to roll.`);
       return;
     }
@@ -248,7 +251,7 @@ function handleBuildSettlement(
   pay(game, actor, COSTS.settlement);
   game.buildings[vertexId] = { type: "settlement", owner: actor.id };
   actor.settlementsLeft -= 1;
-  addLog(game, `${actor.name} built a settlement.`, actor.id);
+  addLog(game, `${actor.name} built a settlement.`, actor.id, true);
   recomputeLongestRoad(game); // may cut an opponent's road
   checkWin(game);
   return ok;
@@ -271,7 +274,7 @@ function handleBuildCity(
   building.type = "city";
   actor.citiesLeft -= 1;
   actor.settlementsLeft += 1; // settlement piece returns to supply
-  addLog(game, `${actor.name} upgraded to a city.`, actor.id);
+  addLog(game, `${actor.name} upgraded to a city.`, actor.id, true);
   checkWin(game);
   return ok;
 }
@@ -289,25 +292,28 @@ function handleRoll(game: InternalGame, actor: InternalPlayer): ActionResult {
   addLog(game, `${actor.name} rolled ${sum}.`, actor.id);
 
   if (sum === 7) {
-    // Discards for anyone holding more than 7 cards.
+    // Discards for anyone over the discard limit.
+    const limit = game.options.discardLimit;
     game.pendingDiscards = {};
     for (const p of game.players) {
       const total = totalResources(p);
-      if (total > 7) game.pendingDiscards[p.id] = Math.floor(total / 2);
+      if (total > limit) game.pendingDiscards[p.id] = Math.floor(total / 2);
     }
     game.robberReturnPhase = "main";
+    game.turnEndsAt = null; // pause the turn timer during robber resolution
     if (Object.keys(game.pendingDiscards).length > 0) {
       game.phase = "discard";
-      addLog(game, `Players with more than 7 cards must discard.`);
+      addLog(game, `Players over ${limit} cards must discard.`, undefined, true);
     } else {
       game.phase = "moveRobber";
-      addLog(game, `${actor.name} must move the robber.`);
+      addLog(game, `${actor.name} must move the robber.`, actor.id, true);
     }
     return ok;
   }
 
   produceResources(game, sum);
   game.phase = "main";
+  armTurnTimer(game);
   return ok;
 }
 
@@ -352,7 +358,7 @@ function handleMoveRobber(
   if (hexId === game.robberHex) return err("Robber must move to a new hex");
 
   game.robberHex = hexId;
-  addLog(game, `${actor.name} moved the robber.`, actor.id);
+  addLog(game, `${actor.name} moved the robber.`, actor.id, true);
 
   // Determine valid steal targets: opponents with a building on this hex.
   const victims = new Set<string>();
@@ -370,7 +376,7 @@ function handleMoveRobber(
       const stolen = pool[Math.floor(Math.random() * pool.length)];
       victim.resources[stolen] -= 1;
       actor.resources[stolen] += 1;
-      addLog(game, `${actor.name} stole a card from ${victim.name}.`, actor.id);
+      addLog(game, `${actor.name} stole a card from ${victim.name}.`, actor.id, true);
     }
   } else if (victims.size > 0) {
     // A steal target exists but none chosen; only allowed if every victim has 0 cards.
@@ -379,6 +385,7 @@ function handleMoveRobber(
   }
 
   game.phase = game.robberReturnPhase;
+  armTurnTimer(game);
   recomputeLargestArmy(game);
   checkWin(game);
   return ok;
@@ -417,7 +424,7 @@ function handlePlayKnight(game: InternalGame, actor: InternalPlayer): ActionResu
   consumeDevCard(actor, "knight", game.turnNumber);
   actor.playedKnights += 1;
   actor.hasPlayedDevThisTurn = true;
-  addLog(game, `${actor.name} played a Knight.`, actor.id);
+  addLog(game, `${actor.name} played a Knight.`, actor.id, true);
   recomputeLargestArmy(game);
   game.robberReturnPhase = game.phase;
   game.phase = "moveRobber";
@@ -432,7 +439,7 @@ function handlePlayRoadBuilding(game: InternalGame, actor: InternalPlayer): Acti
   consumeDevCard(actor, "roadBuilding", game.turnNumber);
   actor.hasPlayedDevThisTurn = true;
   game.freeRoads = Math.min(2, actor.roadsLeft);
-  addLog(game, `${actor.name} played Road Building.`, actor.id);
+  addLog(game, `${actor.name} played Road Building.`, actor.id, true);
   return ok;
 }
 
@@ -452,7 +459,7 @@ function handleYearOfPlenty(
   consumeDevCard(actor, "yearOfPlenty", game.turnNumber);
   actor.hasPlayedDevThisTurn = true;
   give(game, actor, want);
-  addLog(game, `${actor.name} played Year of Plenty.`, actor.id);
+  addLog(game, `${actor.name} played Year of Plenty.`, actor.id, true);
   return ok;
 }
 
@@ -470,7 +477,7 @@ function handleMonopoly(game: InternalGame, actor: InternalPlayer, resource: Res
     p.resources[resource] = 0;
   }
   actor.resources[resource] += taken;
-  addLog(game, `${actor.name} played Monopoly on ${resource} (+${taken}).`, actor.id);
+  addLog(game, `${actor.name} played Monopoly on ${resource} (+${taken}).`, actor.id, true);
   return ok;
 }
 
@@ -599,6 +606,7 @@ function handleEndTurn(game: InternalGame, actor: InternalPlayer): ActionResult 
   game.phase = "roll";
   const next = currentPlayer(game);
   next.hasPlayedDevThisTurn = false;
+  armTurnTimer(game);
   addLog(game, `${next.name}'s turn.`, next.id);
   return ok;
 }

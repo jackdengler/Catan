@@ -78,6 +78,20 @@ describe("GameHost", () => {
     expect(restored.botStep().acted).toBe(true);
   });
 
+  it("restores an older save that predates house-rule options", () => {
+    const host = new GameHost("OLD");
+    host.addBot();
+    host.addBot();
+    host.forceStart();
+    const snap = JSON.parse(JSON.stringify(host.serialize()));
+    // Simulate a save written before options/turnEndsAt existed.
+    delete snap.game.options;
+    delete snap.game.turnEndsAt;
+    const restored = GameHost.restore(snap);
+    // Doesn't crash — options are backfilled — and the engine still runs.
+    expect(restored.botStep().acted).toBe(true);
+  });
+
   it("lets a player reconnect by id after the game starts", () => {
     const host = new GameHost("RECO");
     const a = host.join("Alice", "red");

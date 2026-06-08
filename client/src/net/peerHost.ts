@@ -126,6 +126,10 @@ export class HostTransport extends Transport {
     this.relay?.start();
   }
 
+  setOptions(options: Partial<import("@catan/shared").GameOptions>): void {
+    this.relay?.host.setOptions(options);
+  }
+
   private attach(conn: DataConnection): void {
     const relayConn: RelayConn = {
       get open() {

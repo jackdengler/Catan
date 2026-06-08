@@ -8,6 +8,8 @@ import type {
 import { RESOURCES } from "@catan/shared";
 import { sendAction } from "../net/socket.js";
 import { Board } from "../game/Board.js";
+import { EventBanner } from "../game/EventBanner.js";
+import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, RESOURCE_EMOJI } from "../game/theme.js";
 import {
   legalCities,
@@ -215,10 +217,11 @@ export function PhoneGame({ game, me, myId }: Props) {
     );
   }
 
-  // --- Default: swipe between [play] and [board] ---------------------------
+  // --- Default: swipe between [play], [board], [log] -----------------------
   return (
     <>
       {rollGain && <RollGainToast gain={rollGain} />}
+      <EventBanner log={game.log} />
       <div className="swipe">
         <section className="swipe-page">
           <PlayPanel
@@ -233,12 +236,13 @@ export function PhoneGame({ game, me, myId }: Props) {
           />
         </section>
         <section className="swipe-page board-page">
-          <div className="page-hint">◀ swipe for actions</div>
+          <div className="page-hint">◀ actions · log ▶</div>
           <div className="phone-board-view">
-            <Board state={game} />
+            <Board state={game} animate />
           </div>
           <div className="board-actions">
             <MiniHand me={me} />
+            <TurnTimer endsAt={game.turnEndsAt} />
             {myTurn && game.phase === "roll" && (
               <button className="primary" onClick={() => sendAction({ type: "rollDice" })}>
                 🎲 Roll
@@ -249,6 +253,16 @@ export function PhoneGame({ game, me, myId }: Props) {
                 End turn ⏭
               </button>
             )}
+          </div>
+        </section>
+        <section className="swipe-page log-page">
+          <div className="page-hint">◀ swipe for board</div>
+          <div className="log phone-log">
+            {[...game.log].reverse().map((l) => (
+              <div key={l.id} className={`log-line ${l.major ? "major" : ""}`}>
+                {l.text}
+              </div>
+            ))}
           </div>
         </section>
       </div>
@@ -290,6 +304,7 @@ function PlayPanel({
 
       <div className="status-line">
         {myTurn ? <strong>Your turn</strong> : <span>{current.name}'s turn</span>}
+        <TurnTimer endsAt={game.turnEndsAt} />
         {game.dice && (
           <span className="dice-mini">
             🎲 {game.dice[0]}+{game.dice[1]} = {game.dice[0] + game.dice[1]}

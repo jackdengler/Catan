@@ -1,6 +1,8 @@
 import {
+  DEFAULT_OPTIONS,
   PLAYER_COLORS,
   type Action,
+  type GameOptions,
   type LobbyState,
   type PlayerColor,
   type StatePayload,
@@ -44,9 +46,19 @@ export class GameHost {
   readonly roomCode: string;
   private players: HostPlayer[] = [];
   private game: InternalGame | null = null;
+  private pendingOptions: Partial<GameOptions> = {};
 
   constructor(roomCode?: string) {
     this.roomCode = roomCode ?? generateRoomCode();
+  }
+
+  // House rules chosen in the lobby, applied when the game starts.
+  setOptions(options: Partial<GameOptions>): void {
+    if (!this.game) this.pendingOptions = { ...this.pendingOptions, ...options };
+  }
+
+  get options(): Partial<GameOptions> {
+    return this.pendingOptions;
   }
 
   get started(): boolean {
@@ -72,6 +84,10 @@ export class GameHost {
       game.hexById = new Map(game.board.hexes.map((h) => [h.id, h]));
       game.vertexById = new Map(game.board.vertices.map((v) => [v.id, v]));
       game.edgeById = new Map(game.board.edges.map((e) => [e.id, e]));
+      // Backfill fields that may be missing from an older saved format, and
+      // drop any stale turn deadline (it re-arms on the next turn).
+      game.options = { ...DEFAULT_OPTIONS, ...(game.options ?? {}) };
+      game.turnEndsAt = null;
       host.game = game;
     }
     return host;
@@ -152,7 +168,7 @@ export class GameHost {
   forceStart(): { ok: boolean; message?: string } {
     if (this.game) return { ok: false, message: "Already started" };
     if (this.players.length < 2) return { ok: false, message: "Need at least 2 players" };
-    this.game = createGame(this.roomCode, this.players);
+    this.game = createGame(this.roomCode, this.players, this.pendingOptions);
     return { ok: true };
   }
 
@@ -171,6 +187,21 @@ export class GameHost {
     return { acted: true, ok: res.ok, playerId: step.playerId };
   }
 
+  get turnDeadline(): number | null {
+    return this.game?.turnEndsAt ?? null;
+  }
+
+  // Called when the turn timer expires: auto-roll or auto-end for the current
+  // (human) player so a slow/AFK player can't stall the game.
+  autoAdvanceTurn(): boolean {
+    if (!this.game) return false;
+    const cur = this.game.players[this.game.currentPlayerIndex];
+    if (!cur || cur.isBot) return false;
+    if (this.game.phase === "roll") return applyAction(this.game, cur.id, { type: "rollDice" }).ok;
+    if (this.game.phase === "main") return applyAction(this.game, cur.id, { type: "endTurn" }).ok;
+    return false;
+  }
+
   setConnected(playerId: string, connected: boolean): void {
     const p = this.players.find((x) => x.id === playerId);
     if (p) p.connected = connected;
@@ -183,7 +214,7 @@ export class GameHost {
     const host = this.players.find((p) => p.id === playerId);
     if (!host || !host.isHost) return { ok: false, message: "Only the host can start" };
     if (this.players.length < 2) return { ok: false, message: "Need at least 2 players" };
-    this.game = createGame(this.roomCode, this.players);
+    this.game = createGame(this.roomCode, this.players, this.pendingOptions);
     return { ok: true };
   }
 

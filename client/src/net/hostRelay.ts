@@ -15,6 +15,7 @@ export interface RelayConn {
 export class HostRelay {
   private conns = new Map<RelayConn, string>(); // conn -> playerId
   private botTimer: ReturnType<typeof setTimeout> | null = null;
+  private turnTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public readonly host: GameHost,
@@ -86,6 +87,21 @@ export class HostRelay {
     }
     this.onLocal(lobby, this.host.payloadFor(null));
     this.scheduleBots();
+    this.scheduleTurnTimeout();
+  }
+
+  // Enforce the optional turn timer: when it expires, auto-roll/auto-end.
+  private scheduleTurnTimeout(): void {
+    if (this.turnTimer) {
+      clearTimeout(this.turnTimer);
+      this.turnTimer = null;
+    }
+    const deadline = this.host.turnDeadline;
+    if (deadline == null) return;
+    this.turnTimer = setTimeout(() => {
+      this.turnTimer = null;
+      if (this.host.autoAdvanceTurn()) this.broadcast();
+    }, Math.max(0, deadline - Date.now()) + 50);
   }
 
   // After any state change, if a bot needs to act, do it on a short delay so

@@ -3,6 +3,9 @@ import QRCode from "qrcode";
 import { socket } from "../net/socket.js";
 import { useGame } from "../net/useGame.js";
 import { Board } from "../game/Board.js";
+import { HouseRules } from "../game/HouseRules.js";
+import { EventBanner } from "../game/EventBanner.js";
+import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI } from "../game/theme.js";
 import type { Resource } from "@catan/shared";
 
@@ -96,6 +99,7 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
         ))}
         {(!lobby || lobby.players.length === 0) && <div className="muted">Waiting for players…</div>}
       </div>
+      <HouseRules />
       <div className="lobby-controls">
         <button className="ghost" disabled={playerCount >= 4} onClick={() => socket.addBot()}>
           + Add computer player
@@ -116,7 +120,8 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
   return (
     <div className="tv-game">
       <div className="tv-board-wrap">
-        <Board state={game} />
+        <Board state={game} animate />
+        <EventBanner log={game.log} />
         {game.dice && (
           <div className="dice">
             <Die n={game.dice[0]} />
@@ -145,6 +150,7 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
             {game.phase === "discard" && "— players discarding"}
             {game.phase === "moveRobber" && "moving the robber"}
           </span>
+          <TurnTimer endsAt={game.turnEndsAt} />
         </div>
 
         <div className="scoreboard">

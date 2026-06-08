@@ -1,6 +1,13 @@
-import type { ResourceCount, Resource, DevCardType, Terrain } from "./types.js";
+import type { ResourceCount, Resource, DevCardType, Terrain, GameOptions } from "./types.js";
 
 export const VICTORY_POINTS_TO_WIN = 10;
+
+export const DEFAULT_OPTIONS: GameOptions = {
+  targetVictoryPoints: 10,
+  discardLimit: 7,
+  turnTimerSeconds: 0,
+  randomizeOrder: true,
+};
 
 export const EMPTY_RESOURCES = (): ResourceCount => ({
   wood: 0,

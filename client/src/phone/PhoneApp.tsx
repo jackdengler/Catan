@@ -4,6 +4,7 @@ import { socket, sendAction, isHostPlayRole, hasResumableHostGame, clearHostSave
 import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
+import { HouseRules } from "../game/HouseRules.js";
 import { PLAYER_FILL } from "../game/theme.js";
 
 interface Joined {
@@ -194,6 +195,7 @@ function PhoneLobby({
         ))}
       </div>
 
+      {hostControls && <HouseRules />}
       {hostControls && (
         <button className="ghost" disabled={full} onClick={() => socket.addBot()}>
           + Add computer player

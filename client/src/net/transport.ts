@@ -42,4 +42,5 @@ export abstract class Transport {
   addBot(): void {}
   removeBot(_id: string): void {}
   startHostGame(): void {}
+  setOptions(_options: Partial<import("@catan/shared").GameOptions>): void {}
 }

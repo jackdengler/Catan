@@ -164,6 +164,15 @@ export interface LogEntry {
   id: number;
   text: string;
   playerId?: string;
+  major?: boolean; // notable events get an on-screen banner
+}
+
+// Configurable house rules, chosen in the lobby.
+export interface GameOptions {
+  targetVictoryPoints: number; // default 10
+  discardLimit: number; // discard half above this on a 7 (default 7)
+  turnTimerSeconds: number; // 0 = off
+  randomizeOrder: boolean; // shuffle seating/turn order at start
 }
 
 export interface GameStatePublic {
@@ -187,6 +196,8 @@ export interface GameStatePublic {
   hasRolled: boolean;
   hasPlayedDevCard: boolean; // current player played a dev card this turn
   freeRoads: number; // free roads remaining from a road-building card
+  options: GameOptions;
+  turnEndsAt: number | null; // epoch ms deadline for the current turn (if timer on)
   log: LogEntry[];
 }
 

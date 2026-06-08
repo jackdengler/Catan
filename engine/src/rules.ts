@@ -209,7 +209,7 @@ export function recomputeLongestRoad(game: InternalGame): void {
     if (holderLen < 5) {
       game.longestRoadHolder = bestPlayer && bestLen >= 5 ? bestPlayer : null;
       if (game.longestRoadHolder) {
-        addLog(game, `${nameOf(game, game.longestRoadHolder)} takes Longest Road.`);
+        addLog(game, `${nameOf(game, game.longestRoadHolder)} takes Longest Road.`, undefined, true);
       }
       return;
     }
@@ -223,14 +223,14 @@ export function recomputeLongestRoad(game: InternalGame): void {
     }
     if (challenger) {
       game.longestRoadHolder = challenger;
-      addLog(game, `${nameOf(game, challenger)} takes Longest Road.`);
+      addLog(game, `${nameOf(game, challenger)} takes Longest Road.`, undefined, true);
     }
   } else if (bestPlayer && bestLen >= 5) {
     // Award only if unambiguous leader with >= 5.
     const leaders = game.players.filter((p) => p.roadLength === bestLen);
     if (leaders.length === 1) {
       game.longestRoadHolder = bestPlayer;
-      addLog(game, `${nameOf(game, bestPlayer)} earns Longest Road.`);
+      addLog(game, `${nameOf(game, bestPlayer)} earns Longest Road.`, undefined, true);
     }
   }
 }
@@ -250,13 +250,13 @@ export function recomputeLargestArmy(game: InternalGame): void {
   }
   if (challenger) {
     game.largestArmyHolder = challenger;
-    addLog(game, `${nameOf(game, challenger)} takes Largest Army.`);
+    addLog(game, `${nameOf(game, challenger)} takes Largest Army.`, undefined, true);
   } else if (!holder) {
     // First to 3 knights.
     const candidate = game.players.find((p) => p.playedKnights >= 3);
     if (candidate) {
       game.largestArmyHolder = candidate.id;
-      addLog(game, `${nameOf(game, candidate.id)} earns Largest Army.`);
+      addLog(game, `${nameOf(game, candidate.id)} earns Largest Army.`, undefined, true);
     }
   }
 }

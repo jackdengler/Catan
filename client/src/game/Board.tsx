@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameStatePublic, PlayerColor } from "@catan/shared";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI, RESOURCE_FILL, TERRAIN_FILL } from "./theme.js";
 
@@ -7,9 +7,10 @@ interface BoardProps {
   selectable?: "vertex" | "edge" | "hex" | null;
   highlight?: Set<string>;
   onSelect?: (id: string) => void;
+  animate?: boolean; // pop newly-built pieces / robber moves (board displays only)
 }
 
-export function Board({ state, selectable = null, highlight, onSelect }: BoardProps) {
+export function Board({ state, selectable = null, highlight, onSelect, animate = false }: BoardProps) {
   const board = state.board;
 
   const vById = useMemo(
@@ -23,6 +24,31 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
 
   const robber = hexById.get(state.robberHex);
   const hl = highlight ?? new Set<string>();
+
+  // Track newly-placed roads/buildings (and city upgrades) to pop them in.
+  const [recent, setRecent] = useState<Set<string>>(() => new Set());
+  const prevRoads = useRef<Set<string>>(new Set(Object.keys(state.roads)));
+  const prevBuildings = useRef<Map<string, string>>(
+    new Map(Object.entries(state.buildings).map(([id, b]) => [id, b.type]))
+  );
+  useEffect(() => {
+    if (!animate) return;
+    const added: string[] = [];
+    for (const id of Object.keys(state.roads)) if (!prevRoads.current.has(id)) added.push(id);
+    for (const [id, b] of Object.entries(state.buildings))
+      if (prevBuildings.current.get(id) !== b.type) added.push(id);
+    prevRoads.current = new Set(Object.keys(state.roads));
+    prevBuildings.current = new Map(Object.entries(state.buildings).map(([id, b]) => [id, b.type]));
+    if (added.length === 0) return;
+    setRecent((prev) => new Set([...prev, ...added]));
+    const ids = new Set(added);
+    const t = setTimeout(
+      () => setRecent((prev) => new Set([...prev].filter((x) => !ids.has(x)))),
+      1400
+    );
+    return () => clearTimeout(t);
+  }, [state.roads, state.buildings, animate]);
+  const isNew = (id: string) => animate && recent.has(id);
 
   return (
     <svg
@@ -96,18 +122,18 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
       {board.ports.map((port) => {
         const v1 = vById.get(port.vertices[0]);
         const v2 = vById.get(port.vertices[1]);
-        const isAny = port.type === "any";
-        const fill = isAny ? "#2b3a55" : RESOURCE_FILL[port.type];
+        const res = port.type === "any" ? null : port.type;
+        const fill = res ? RESOURCE_FILL[res] : "#2b3a55";
         return (
           <g key={port.id} pointerEvents="none">
             {v1 && <line x1={port.x} y1={port.y} x2={v1.x} y2={v1.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
             {v2 && <line x1={port.x} y1={port.y} x2={v2.x} y2={v2.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
             <circle cx={port.x} cy={port.y} r={15} fill={fill} stroke="#fff" strokeWidth={1.5} />
             <text x={port.x} y={port.y - 2} textAnchor="middle" fontSize={10} fill="#fff" fontWeight={800}>
-              {isAny ? "3:1" : "2:1"}
+              {res ? "2:1" : "3:1"}
             </text>
-            <text x={port.x} y={port.y + 9} textAnchor="middle" fontSize={isAny ? 8 : 10} fill="#fff" fontWeight={700}>
-              {isAny ? "any" : RESOURCE_EMOJI[port.type]}
+            <text x={port.x} y={port.y + 9} textAnchor="middle" fontSize={res ? 10 : 8} fill="#fff" fontWeight={700}>
+              {res ? RESOURCE_EMOJI[res] : "any"}
             </text>
           </g>
         );
@@ -115,7 +141,7 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
 
       {/* Robber */}
       {robber && (
-        <g pointerEvents="none">
+        <g key={state.robberHex} className={animate ? "robber-anim" : undefined} pointerEvents="none">
           <circle cx={robber.x} cy={robber.y - 22} r={11} fill="#222" stroke="#000" />
           <rect x={robber.x - 9} y={robber.y - 14} width={18} height={20} rx={6} fill="#222" />
         </g>
@@ -129,6 +155,7 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
         return (
           <line
             key={eid}
+            className={isNew(eid) ? "piece-new" : undefined}
             x1={e.x1}
             y1={e.y1}
             x2={e.x2}
@@ -165,9 +192,10 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
       {Object.entries(state.buildings).map(([vid, b]) => {
         const v = vById.get(vid)!;
         const c = colorOf(b.owner);
+        const cls = isNew(vid) ? "piece-new" : undefined;
         if (b.type === "city") {
           return (
-            <g key={vid} pointerEvents="none">
+            <g key={vid} className={cls} pointerEvents="none">
               <rect
                 x={v.x - 11}
                 y={v.y - 11}
@@ -183,7 +211,7 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
           );
         }
         return (
-          <g key={vid} pointerEvents="none">
+          <g key={vid} className={cls} pointerEvents="none">
             <circle cx={v.x} cy={v.y} r={9} fill={PLAYER_FILL[c]} stroke={PLAYER_STROKE[c]} strokeWidth={2} />
           </g>
         );

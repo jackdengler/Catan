@@ -1,8 +1,10 @@
 import {
   BANK_PER_RESOURCE,
+  DEFAULT_OPTIONS,
   DEV_DECK,
   EMPTY_RESOURCES,
   PIECES,
+  type GameOptions,
   type BoardLayout,
   type Building,
   type DevCard,
@@ -65,6 +67,8 @@ export interface InternalGame {
   turnNumber: number;
   freeRoads: number; // free roads remaining (road-building card)
   robberReturnPhase: Phase; // phase to resume after moving the robber
+  options: GameOptions;
+  turnEndsAt: number | null;
   log: LogEntry[];
   logCounter: number;
 }
@@ -87,8 +91,11 @@ export function createGame(
     isHost: boolean;
     connected: boolean;
     isBot?: boolean;
-  }[]
+  }[],
+  optionsInput?: Partial<GameOptions>
 ): InternalGame {
+  const options: GameOptions = { ...DEFAULT_OPTIONS, ...optionsInput };
+  if (options.randomizeOrder) lobbyPlayers = shuffle(lobbyPlayers);
   const { layout, robberHex } = generateBoard();
 
   const hexById = new Map(layout.hexes.map((h) => [h.id, h]));
@@ -154,6 +161,8 @@ export function createGame(
     turnNumber: 1,
     freeRoads: 0,
     robberReturnPhase: "main",
+    options,
+    turnEndsAt: null,
     log: [],
     logCounter: 0,
   };
@@ -162,10 +171,18 @@ export function createGame(
   return game;
 }
 
-export function addLog(game: InternalGame, text: string, playerId?: string): void {
+export function addLog(game: InternalGame, text: string, playerId?: string, major = false): void {
   game.logCounter += 1;
-  game.log.push({ id: game.logCounter, text, playerId });
-  if (game.log.length > 60) game.log.shift();
+  game.log.push({ id: game.logCounter, text, playerId, major });
+  if (game.log.length > 80) game.log.shift();
+}
+
+// Start (or clear) the current turn's countdown based on the timer house rule.
+// Only humans get a deadline; bots act quickly on their own.
+export function armTurnTimer(game: InternalGame): void {
+  const secs = game.options.turnTimerSeconds;
+  const current = game.players[game.currentPlayerIndex];
+  game.turnEndsAt = secs > 0 && current && !current.isBot ? Date.now() + secs * 1000 : null;
 }
 
 export function currentPlayer(game: InternalGame): InternalPlayer {
@@ -201,6 +218,8 @@ export function totalVictoryPoints(game: InternalGame, p: InternalPlayer): numbe
 }
 
 function toPublicPlayer(game: InternalGame, p: InternalPlayer): PublicPlayer {
+  // Hidden victory-point cards are revealed once the game is over.
+  const vp = publicVictoryPoints(game, p) + (game.winner ? hiddenVictoryPoints(p) : 0);
   return {
     id: p.id,
     name: p.name,
@@ -211,7 +230,7 @@ function toPublicPlayer(game: InternalGame, p: InternalPlayer): PublicPlayer {
     resourceTotal: totalResources(p),
     devCardTotal: p.devCards.length,
     playedKnights: p.playedKnights,
-    victoryPoints: publicVictoryPoints(game, p),
+    victoryPoints: vp,
     longestRoad: game.longestRoadHolder === p.id,
     largestArmy: game.largestArmyHolder === p.id,
     roadLength: p.roadLength,
@@ -243,6 +262,8 @@ export function toPublicState(game: InternalGame): GameStatePublic {
     hasRolled: game.hasRolled,
     hasPlayedDevCard: currentPlayer(game).hasPlayedDevThisTurn,
     freeRoads: game.freeRoads,
+    options: game.options,
+    turnEndsAt: game.turnEndsAt,
     log: game.log,
   };
 }
