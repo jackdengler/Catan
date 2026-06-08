@@ -42,17 +42,95 @@ function vertexValue(game: InternalGame, vertexId: string): number {
   return total;
 }
 
+// A richer settlement-spot score: production, resource diversity, and ports.
+function settlementScore(game: InternalGame, vertexId: string): number {
+  const v = game.vertexById.get(vertexId);
+  if (!v) return 0;
+  let pips = 0;
+  const resources = new Set<string>();
+  for (const hexId of v.hexes) {
+    const hex = game.hexById.get(hexId);
+    if (hex && hex.terrain !== "desert") {
+      pips += tokenPips(hex.numberToken);
+      resources.add(hex.terrain);
+    }
+  }
+  let score = pips + resources.size * 0.5;
+  if (game.board.ports.some((port) => port.vertices.includes(vertexId))) score += 1;
+  return score;
+}
+
+// Rough public victory-point total, used to target the leader with the robber.
+function vpOf(game: InternalGame, id: string): number {
+  let v = 0;
+  for (const b of Object.values(game.buildings)) if (b.owner === id) v += b.type === "city" ? 2 : 1;
+  if (game.longestRoadHolder === id) v += 2;
+  if (game.largestArmyHolder === id) v += 2;
+  return v;
+}
+
+function playable(game: InternalGame, p: InternalPlayer, type: "knight" | "roadBuilding" | "yearOfPlenty" | "monopoly"): boolean {
+  return p.devCards.some((c) => c.type === type && c.boughtTurn < game.turnNumber);
+}
+
+function missingFor(p: InternalPlayer, cost: Partial<Record<Resource, number>>): Record<Resource, number> {
+  const m: Record<Resource, number> = { wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 };
+  for (const r of RESOURCES) m[r] = Math.max(0, (cost[r] ?? 0) - p.resources[r]);
+  return m;
+}
+
+function firstLegalRoad(game: InternalGame, p: InternalPlayer): string | null {
+  const e = game.board.edges.find((edge) => canPlaceRoad(game, p.id, edge.id));
+  return e ? e.id : null;
+}
+
+function missingSum(res: Record<Resource, number>, cost: Partial<Record<Resource, number>>): number {
+  let s = 0;
+  for (const r of RESOURCES) s += Math.max(0, (cost[r] ?? 0) - res[r]);
+  return s;
+}
+
+// Accept a proposed trade only if it brings us strictly closer to our next
+// build (the bot receives `give` and hands over `receive`).
+function botEvaluatesTrade(
+  game: InternalGame,
+  p: InternalPlayer,
+  give: Record<Resource, number>,
+  receive: Record<Resource, number>
+): boolean {
+  if (!canAfford(p, receive)) return false;
+  const cost = chooseBuildTarget(game, p) ?? COSTS.devCard;
+  const after: Record<Resource, number> = { ...p.resources };
+  for (const r of RESOURCES) {
+    after[r] += (give[r] ?? 0) - (receive[r] ?? 0);
+    if (after[r] < 0) return false;
+  }
+  return missingSum(after, cost) < missingSum(p.resources, cost);
+}
+
+// Worth playing a knight now if the robber sits on one of our hexes, or if it
+// would win/keep Largest Army.
+function shouldPlayKnight(game: InternalGame, p: InternalPlayer): boolean {
+  const robberHex = game.hexById.get(game.robberHex);
+  if (robberHex && robberHex.corners.some((v) => game.buildings[v]?.owner === p.id)) return true;
+  const holder = game.largestArmyHolder;
+  const holderKnights = holder ? game.players.find((x) => x.id === holder)?.playedKnights ?? 0 : 0;
+  return holder !== p.id && p.playedKnights + 1 >= 3 && p.playedKnights + 1 > holderKnights;
+}
+
 // Determine the next thing any bot should do, or null if no bot needs to act.
 export function computeBotStep(
   game: InternalGame
 ): { playerId: string; action: Action } | null {
   if (game.phase === "ended") return null;
 
-  // 1. Respond to a pending player-trade (bots decline).
+  // 1. Respond to a pending player-trade: accept only if it helps.
   if (game.pendingTrade) {
+    const trade = game.pendingTrade;
     for (const p of game.players) {
-      if (p.isBot && game.pendingTrade.responses[p.id] === "pending") {
-        return { playerId: p.id, action: { type: "respondTrade", accept: false } };
+      if (p.isBot && trade.responses[p.id] === "pending") {
+        const accept = botEvaluatesTrade(game, p, trade.give, trade.receive);
+        return { playerId: p.id, action: { type: "respondTrade", accept } };
       }
     }
   }
@@ -75,6 +153,10 @@ export function computeBotStep(
     case "setup":
       return { playerId: cur.id, action: botSetup(game, cur) };
     case "roll":
+      // Play a knight before rolling if it frees our hex or wins largest army.
+      if (!cur.hasPlayedDevThisTurn && playable(game, cur, "knight") && shouldPlayKnight(game, cur)) {
+        return { playerId: cur.id, action: { type: "playKnight" } };
+      }
       return { playerId: cur.id, action: { type: "rollDice" } };
     case "moveRobber":
       return { playerId: cur.id, action: botRobber(game, cur) };
@@ -109,7 +191,7 @@ function botSetup(game: InternalGame, p: InternalPlayer): Action {
   if (setup.needs === "settlement") {
     const spots = game.board.vertices
       .filter((v) => canPlaceSettlement(game, p.id, v.id, false))
-      .sort((a, b) => vertexValue(game, b.id) - vertexValue(game, a.id));
+      .sort((a, b) => settlementScore(game, b.id) - settlementScore(game, a.id));
     const target = spots[0] ?? game.board.vertices.find((v) => !game.buildings[v.id])!;
     return { type: "placeSettlement", vertexId: target.id };
   }
@@ -138,7 +220,7 @@ function botRobber(game: InternalGame, p: InternalPlayer): Action {
       if (!b) continue;
       const weight = b.type === "city" ? 2 : 1;
       if (b.owner === p.id) score -= weight * 3; // avoid blocking ourselves
-      else score += weight * tokenPips(hex.numberToken);
+      else score += weight * tokenPips(hex.numberToken) * (1 + 0.4 * vpOf(game, b.owner));
     }
     if (score > bestScore) {
       bestScore = score;
@@ -159,49 +241,97 @@ function botRobber(game: InternalGame, p: InternalPlayer): Action {
 }
 
 function botMain(game: InternalGame, p: InternalPlayer): Action {
-  // 1. Upgrade the best settlement to a city.
+  // 0. Place any free roads from a road-building card first.
+  if (game.freeRoads > 0) {
+    const edge = roadTowardOpenSpot(game, p) ?? firstLegalRoad(game, p);
+    if (edge) return { type: "placeRoad", edgeId: edge };
+  }
+
+  // 1. Year of Plenty to complete a build we're 1-2 resources short of.
+  if (!p.hasPlayedDevThisTurn && playable(game, p, "yearOfPlenty")) {
+    const cost = chooseBuildTarget(game, p);
+    if (cost) {
+      const missing = missingFor(p, cost);
+      const need = RESOURCES.reduce((s, r) => s + missing[r], 0);
+      if (need >= 1 && need <= 2) {
+        const want: Resource[] = [];
+        for (const r of RESOURCES) for (let i = 0; i < missing[r]; i++) want.push(r);
+        while (want.length < 2) want.push(want[0] ?? "wheat");
+        if (game.bank[want[0]] >= 1 && game.bank[want[1]] >= (want[0] === want[1] ? 2 : 1)) {
+          return { type: "playYearOfPlenty", resources: [want[0], want[1]] };
+        }
+      }
+    }
+  }
+
+  // 2. Upgrade the best settlement to a city.
   if (canAfford(p, COSTS.city) && p.citiesLeft > 0) {
     const settlements = Object.entries(game.buildings)
       .filter(([, b]) => b.owner === p.id && b.type === "settlement")
       .map(([vid]) => vid)
-      .sort((a, b) => vertexValue(game, b) - vertexValue(game, a));
+      .sort((a, b) => settlementScore(game, b) - settlementScore(game, a));
     if (settlements.length) return { type: "buildCity", vertexId: settlements[0] };
   }
 
-  // 2. Build a settlement on the best legal spot.
+  // 3. Build a settlement on the best legal spot.
   if (canAfford(p, COSTS.settlement) && p.settlementsLeft > 0) {
     const spots = game.board.vertices
       .filter((v) => canPlaceSettlement(game, p.id, v.id, true))
-      .sort((a, b) => vertexValue(game, b.id) - vertexValue(game, a.id));
+      .sort((a, b) => settlementScore(game, b.id) - settlementScore(game, a.id));
     if (spots.length) return { type: "buildSettlement", vertexId: spots[0].id };
   }
 
-  // 3. Extend a road toward the nearest open, buildable vertex (multi-hop).
+  // 4. Extend a road toward the nearest open, buildable vertex (multi-hop).
   if (canAfford(p, COSTS.road) && p.roadsLeft > 0) {
     const edge = roadTowardOpenSpot(game, p);
     if (edge) return { type: "buildRoad", edgeId: edge };
   }
 
-  // 4. Bank-trade surplus toward the next city/settlement.
+  // 5. Monopoly when opponents are sitting on a lot of one resource.
+  if (!p.hasPlayedDevThisTurn && playable(game, p, "monopoly")) {
+    let best: Resource | null = null;
+    let bestAmt = 0;
+    for (const r of RESOURCES) {
+      let amt = 0;
+      for (const op of game.players) if (op.id !== p.id) amt += op.resources[r];
+      if (amt > bestAmt) {
+        bestAmt = amt;
+        best = r;
+      }
+    }
+    if (best && bestAmt >= 4) return { type: "playMonopoly", resource: best };
+  }
+
+  // 6. Road Building to expand for free when there's somewhere worth going.
+  if (
+    !p.hasPlayedDevThisTurn &&
+    playable(game, p, "roadBuilding") &&
+    p.roadsLeft > 0 &&
+    roadTowardOpenSpot(game, p)
+  ) {
+    return { type: "playRoadBuilding" };
+  }
+
+  // 7. Bank-trade surplus toward the next city/settlement.
   const buildCost = chooseBuildTarget(game, p);
   if (buildCost) {
     const trade = bankTradeToward(game, p, buildCost);
     if (trade) return trade;
   }
 
-  // 5. Buy a development card (knights -> largest army, plus victory points).
+  // 8. Buy a development card (knights -> largest army, plus victory points).
   if (canAfford(p, COSTS.devCard) && game.devDeck.length > 0) {
     return { type: "buyDevCard" };
   }
 
-  // 6. If boxed in, convert surplus toward a dev card so resources keep turning
+  // 9. If boxed in, convert surplus toward a dev card so resources keep turning
   //    into progress (and games don't stall).
   if (game.devDeck.length > 0) {
     const trade = bankTradeToward(game, p, COSTS.devCard);
     if (trade) return trade;
   }
 
-  // 7. Nothing useful — end the turn.
+  // 10. Nothing useful — end the turn.
   return { type: "endTurn" };
 }
 
