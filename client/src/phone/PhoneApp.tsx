@@ -35,6 +35,18 @@ export function PhoneApp() {
     else socket.once("connect", tryRejoin);
   }, [initialCode, joined]);
 
+  // Once joined, make sure ?room=CODE is in the URL so a later refresh always
+  // auto-reconnects — even if the player typed the code instead of scanning the
+  // QR (which already carries it).
+  useEffect(() => {
+    if (!joined) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("room") !== joined.roomCode) {
+      url.searchParams.set("room", joined.roomCode);
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [joined]);
+
   // Leave the current game: forget this device's player id for the room and
   // reload, which drops back to the enter-room-code screen with a fresh
   // connection (no auto-rejoin).
