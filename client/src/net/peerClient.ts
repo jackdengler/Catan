@@ -1,5 +1,5 @@
 import Peer, { type DataConnection } from "peerjs";
-import type { PlayerColor } from "@catan/shared";
+import type { LobbyPlayer, PlayerColor } from "@catan/shared";
 import { Transport, type OutEvent } from "./transport.js";
 import { peerIdForRoom, type HostMessage } from "./messages.js";
 import { peerOptions } from "./peerConfig.js";
@@ -18,7 +18,12 @@ export class ClientTransport extends Transport {
   private peer: Peer | null = null;
   private conn: DataConnection | null = null;
   private join: JoinInfo | null = null;
-  private joinCb?: (res: { ok: boolean; playerId?: string; message?: string }) => void;
+  private joinCb?: (res: {
+    ok: boolean;
+    playerId?: string;
+    message?: string;
+    roster?: LobbyPlayer[];
+  }) => void;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -114,6 +119,14 @@ export class ClientTransport extends Transport {
       case "rejected": {
         if (this.joinCb) {
           this.joinCb({ ok: false, message: msg.message });
+          this.joinCb = undefined;
+        }
+        break;
+      }
+      case "roster": {
+        // Game in progress — offer the open seats to the join screen.
+        if (this.joinCb) {
+          this.joinCb({ ok: false, roster: msg.players });
           this.joinCb = undefined;
         }
         break;

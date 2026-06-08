@@ -4,7 +4,6 @@ import { socket, sendAction } from "../net/socket.js";
 import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
-import { Board } from "../game/Board.js";
 import { PLAYER_FILL } from "../game/theme.js";
 
 interface Joined {
@@ -15,7 +14,6 @@ interface Joined {
 export function PhoneApp() {
   const { lobby, game, me, error, connected } = useGame();
   const [joined, setJoined] = useState<Joined | null>(null);
-  const [showBoard, setShowBoard] = useState(false);
 
   const initialCode = new URLSearchParams(window.location.search).get("room")?.toUpperCase() ?? "";
 
@@ -68,34 +66,14 @@ export function PhoneApp() {
       {!connected && <div className="reconnect-banner">Reconnecting…</div>}
       <div className="phone-topbar">
         <span className="room-tag">Room {joined.roomCode}</span>
-        <div className="topbar-actions">
-          {game && game.phase !== "lobby" && (
-            <button className="leave-btn" onClick={() => setShowBoard(true)}>
-              🗺️ Board
-            </button>
-          )}
-          <button className="leave-btn" onClick={leave}>
-            Leave
-          </button>
-        </div>
+        <button className="leave-btn" onClick={leave}>
+          Leave
+        </button>
       </div>
       {!game || game.phase === "lobby" ? (
         <PhoneLobby lobby={lobby} myId={joined.playerId} />
       ) : (
         <PhoneGame game={game} me={me} myId={joined.playerId} />
-      )}
-      {showBoard && game && (
-        <div className="board-overlay">
-          <div className="board-overlay-bar">
-            <span>Board</span>
-            <button className="ghost" onClick={() => setShowBoard(false)}>
-              Close ✕
-            </button>
-          </div>
-          <div className="board-overlay-canvas">
-            <Board state={game} />
-          </div>
-        </div>
       )}
     </div>
   );

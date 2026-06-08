@@ -43,7 +43,12 @@ export class HostRelay {
     if (msg.kind === "join") {
       const res = this.host.join(msg.name, msg.color, msg.playerId);
       if (!res.ok || !res.playerId) {
-        conn.send({ kind: "rejected", message: res.message ?? "Could not join" });
+        // If the game is already running, let them rejoin as a disconnected seat.
+        if (this.host.started) {
+          conn.send({ kind: "roster", players: this.host.lobby().players });
+        } else {
+          conn.send({ kind: "rejected", message: res.message ?? "Could not join" });
+        }
         return;
       }
       // Drop any stale connection for this same player (a reconnect arrives on

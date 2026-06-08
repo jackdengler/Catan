@@ -132,6 +132,10 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
       </div>
 
       <aside className="tv-side">
+        <div className="tv-roomcode">
+          Room <strong>{game.roomCode}</strong> · join at {window.location.host}
+          {window.location.pathname}
+        </div>
         <div className="turn-banner" style={{ background: PLAYER_FILL[current.color] }}>
           <strong>{current.name}</strong>
           <span>

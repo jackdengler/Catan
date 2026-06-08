@@ -112,6 +112,29 @@ describe("host <-> phone protocol (HostRelay)", () => {
     expect(after.setup!.needs).toBe("road");
   });
 
+  it("offers the roster and lets a disconnected seat be reclaimed", () => {
+    const { relay } = setup();
+    const a = new FakeConn();
+    const b = new FakeConn();
+    relay.handle(a, join("Alice", "red"));
+    relay.handle(b, join("Bob", "blue"));
+    const aId = a.last("joined")!.playerId;
+    relay.handle(a, { kind: "action", action: { type: "startGame" } });
+
+    relay.disconnect(a); // Alice drops
+
+    // A fresh phone joins the in-progress game -> gets the roster.
+    const c = new FakeConn();
+    relay.handle(c, join("?", "red"));
+    const roster = c.last("roster");
+    expect(roster).toBeTruthy();
+    expect(roster!.players.find((p) => p.id === aId)!.connected).toBe(false);
+
+    // Claim Alice's seat.
+    relay.handle(c, join("Alice", "red", aId));
+    expect(c.last("joined")?.playerId).toBe(aId);
+  });
+
   it("marks a player offline when their phone disconnects", () => {
     const { relay, getLocal } = setup();
     const a = new FakeConn();

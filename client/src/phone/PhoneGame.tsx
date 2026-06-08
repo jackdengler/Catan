@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   DevCardType,
   GameStatePublic,
@@ -36,6 +36,9 @@ export function PhoneGame({ game, me, myId }: Props) {
   const [robberHex, setRobberHex] = useState<string | null>(null);
   const [showDev, setShowDev] = useState(false);
   const [showTrade, setShowTrade] = useState(false);
+
+  // Animate the resources this player gains on each dice roll.
+  const rollGain = useRollGain(game, me);
 
   // Reset transient UI when the turn or phase changes.
   useEffect(() => {
@@ -157,6 +160,16 @@ export function PhoneGame({ game, me, myId }: Props) {
           </>
         ) : (
           <div className="target-list">
+            <button
+              className="primary big"
+              onClick={() => {
+                const t = targets[Math.floor(Math.random() * targets.length)];
+                sendAction({ type: "moveRobber", hexId: robberHex, stealFrom: t.id });
+                setRobberHex(null);
+              }}
+            >
+              🎲 Steal from a random player
+            </button>
             {targets.map((t) => (
               <button
                 key={t.id}
@@ -202,7 +215,62 @@ export function PhoneGame({ game, me, myId }: Props) {
     );
   }
 
-  // --- Default: hand + status + actions ------------------------------------
+  // --- Default: swipe between [play] and [board] ---------------------------
+  return (
+    <>
+      {rollGain && <RollGainToast gain={rollGain} />}
+      <div className="swipe">
+        <section className="swipe-page">
+          <PlayPanel
+            game={game}
+            me={me}
+            myId={myId}
+            current={current}
+            myTurn={myTurn}
+            setSelecting={setSelecting}
+            setShowDev={setShowDev}
+            setShowTrade={setShowTrade}
+          />
+        </section>
+        <section className="swipe-page board-page">
+          <div className="page-hint">◀ swipe for actions</div>
+          <div className="phone-board-view">
+            <Board state={game} />
+          </div>
+        </section>
+      </div>
+
+      {showDev && me && <DevMenu game={game} me={me} onClose={() => setShowDev(false)} />}
+      {showTrade && me && (
+        <TradeBuilder game={game} me={me} onClose={() => setShowTrade(false)} />
+      )}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Play panel (hand + status + actions) — page 1 of the swipe view
+// ---------------------------------------------------------------------------
+
+function PlayPanel({
+  game,
+  me,
+  myId,
+  current,
+  myTurn,
+  setSelecting,
+  setShowDev,
+  setShowTrade,
+}: {
+  game: GameStatePublic;
+  me: PrivateState | null;
+  myId: string;
+  current: GameStatePublic["players"][number];
+  myTurn: boolean;
+  setSelecting: (s: Selecting) => void;
+  setShowDev: (b: boolean) => void;
+  setShowTrade: (b: boolean) => void;
+}) {
   return (
     <div className="phone-game">
       <Hand game={game} me={me} myId={myId} />
@@ -259,13 +327,6 @@ export function PhoneGame({ game, me, myId }: Props) {
 
       {!myTurn && game.phase !== "moveRobber" && (
         <p className="muted center">Waiting for {current.name}…</p>
-      )}
-
-      {showDev && me && (
-        <DevMenu game={game} me={me} onClose={() => setShowDev(false)} />
-      )}
-      {showTrade && me && (
-        <TradeBuilder game={game} me={me} onClose={() => setShowTrade(false)} />
       )}
 
       <MiniScores game={game} myId={myId} />
@@ -401,6 +462,53 @@ function ResRow({
           <button onClick={() => onAdjust(r, +1)}>+</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Roll-gain animation: shows the resources this player collected on each roll.
+// ---------------------------------------------------------------------------
+
+function useRollGain(game: GameStatePublic, me: PrivateState | null) {
+  const prevDice = useRef<string | null>(null);
+  const prevRes = useRef<Record<Resource, number> | null>(null);
+  const [gain, setGain] = useState<{ items: [Resource, number][]; id: number } | null>(null);
+
+  useEffect(() => {
+    if (!me) return;
+    const diceStr = game.dice ? `${game.dice[0]}-${game.dice[1]}:${game.currentPlayerIndex}` : null;
+    const prev = prevRes.current;
+    // A roll just happened when the dice go from cleared (null) to a value.
+    const rolled = prevDice.current === null && diceStr !== null;
+    if (rolled && prev) {
+      const items = RESOURCES.map(
+        (r) => [r, me.resources[r] - (prev[r] ?? 0)] as [Resource, number]
+      ).filter(([, n]) => n > 0);
+      if (items.length) {
+        const id = Date.now();
+        setGain({ items, id });
+        window.setTimeout(() => setGain((g) => (g && g.id === id ? null : g)), 2600);
+      }
+    }
+    prevDice.current = diceStr;
+    prevRes.current = { ...me.resources };
+  }, [game.dice, game.currentPlayerIndex, me]);
+
+  return gain;
+}
+
+function RollGainToast({ gain }: { gain: { items: [Resource, number][]; id: number } }) {
+  return (
+    <div className="roll-gain" key={gain.id}>
+      <span className="roll-gain-label">You collected</span>
+      <div className="roll-gain-items">
+        {gain.items.map(([r, n]) => (
+          <span key={r} className="roll-gain-item">
+            {RESOURCE_EMOJI[r]} +{n}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

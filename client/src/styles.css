@@ -20,6 +20,8 @@ body,
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
+  /* Prevent the browser's pull-to-refresh / bounce while playing. */
+  overscroll-behavior: none;
 }
 
 button {
@@ -267,6 +269,19 @@ button.tiny {
   gap: 12px;
   overflow: hidden;
 }
+.tv-roomcode {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-align: center;
+}
+.tv-roomcode strong {
+  color: var(--accent);
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+}
 .turn-banner {
   border-radius: 12px;
   padding: 12px 16px;
@@ -459,9 +474,98 @@ button.tiny {
 .error-msg {
   color: #ff9b9b;
 }
+.claim-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.claim-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid;
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--panel);
+  font-size: 1.1rem;
+}
 
 .phone-lobby h2 {
   text-align: center;
+}
+
+/* Swipe between the play panel and the board */
+.swipe {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.swipe::-webkit-scrollbar {
+  display: none;
+}
+.swipe-page {
+  flex: 0 0 100%;
+  min-width: 100%;
+  scroll-snap-align: start;
+}
+.board-page {
+  display: flex;
+  flex-direction: column;
+  height: 78vh;
+}
+.page-hint {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 4px 0;
+}
+.phone-board-view {
+  flex: 1;
+  min-height: 0;
+}
+.phone-board-view .board-svg {
+  height: 100%;
+}
+
+/* Resources collected on a roll */
+.roll-gain {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 55;
+  background: rgba(16, 36, 26, 0.96);
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 10px 18px;
+  text-align: center;
+  pointer-events: none;
+  animation: rollpop 2.6s ease forwards;
+}
+@keyframes rollpop {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-12px) scale(0.8); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1.06); }
+  18% { transform: translateX(-50%) translateY(0) scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.95); }
+}
+.roll-gain-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.roll-gain-items {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.roll-gain-item {
+  color: var(--accent);
 }
 
 .phone-game {
