@@ -44,8 +44,10 @@ server/   OPTIONAL Node + Socket.IO server (a LAN fallback; not used by Pages)
 > introduce two devices the first time — browsers can't find each other on a LAN
 > on their own. This uses PeerJS's **free public broker** (no account, no signup);
 > it's only used for the ~1-second handshake, after which **all game traffic is
-> direct phone-to-phone on your WiFi**. If you want zero third-party reliance for
-> same-room play, use the optional local server below instead.
+> direct phone-to-phone on your WiFi**. If you want zero third-party reliance you
+> can point the app at your own broker by setting `VITE_PEER_HOST` (+ optional
+> `VITE_PEER_PORT` / `VITE_PEER_PATH` / `VITE_PEER_SECURE`) at build time, or use
+> the optional local server below.
 
 ## Deploy to GitHub Pages
 

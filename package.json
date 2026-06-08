@@ -16,7 +16,7 @@
     "build": "npm -w client run build",
     "start": "npm -w server run start",
     "typecheck": "tsc -b",
-    "test": "npm -w engine run test"
+    "test": "npm -w engine run test && npm -w client run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

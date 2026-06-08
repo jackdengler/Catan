@@ -2,6 +2,7 @@ import Peer, { type DataConnection } from "peerjs";
 import type { PlayerColor } from "@catan/shared";
 import { Transport, type OutEvent } from "./transport.js";
 import { peerIdForRoom, type HostMessage } from "./messages.js";
+import { peerOptions } from "./peerConfig.js";
 
 // A player's phone. Connects to the board tab over WebRTC and exchanges
 // join/action/state messages.
@@ -42,7 +43,7 @@ export class ClientTransport extends Transport {
       return;
     }
 
-    const peer = new Peer({ debug: 1 });
+    const peer = new Peer(peerOptions());
     this.peer = peer;
     this.pendingJoin = { cb, name: data.name, color: data.color, playerId: data.playerId };
 
