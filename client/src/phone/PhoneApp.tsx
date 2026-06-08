@@ -51,9 +51,12 @@ export function PhoneApp() {
   return (
     <div className="phone">
       {error && <div className="toast">{error}</div>}
-      <button className="leave-btn" onClick={leave}>
-        Leave
-      </button>
+      <div className="phone-topbar">
+        <span className="room-tag">Room {joined.roomCode}</span>
+        <button className="leave-btn" onClick={leave}>
+          Leave
+        </button>
+      </div>
       {!game || game.phase === "lobby" ? (
         <PhoneLobby lobby={lobby} myId={joined.playerId} />
       ) : (
