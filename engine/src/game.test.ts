@@ -163,6 +163,34 @@ describe("resource production", () => {
   });
 });
 
+describe("setup turn order", () => {
+  const firstLegalVertex = (game: ReturnType<typeof newGame>) =>
+    game.board.vertices.find(
+      (v) => !game.buildings[v.id] && !v.adjacent.some((a) => game.buildings[a])
+    )!;
+
+  it("advances the active player after a settlement + road", () => {
+    const game = newGame();
+    expect(game.phase).toBe("setup");
+    expect(game.currentPlayerIndex).toBe(0);
+
+    const v = firstLegalVertex(game);
+    expect(applyAction(game, "p1", { type: "placeSettlement", vertexId: v.id }).ok).toBe(true);
+    // Still p1 — they owe a road before the turn passes.
+    expect(game.currentPlayerIndex).toBe(0);
+
+    const e = game.vertexById.get(v.id)!.edges.find((eid) => !game.roads[eid])!;
+    expect(applyAction(game, "p1", { type: "placeRoad", edgeId: e }).ok).toBe(true);
+    // Now it is p2's turn to place.
+    expect(game.currentPlayerIndex).toBe(1);
+
+    // p1 can no longer place; p2 can.
+    const v2 = firstLegalVertex(game);
+    expect(applyAction(game, "p1", { type: "placeSettlement", vertexId: v2.id }).ok).toBe(false);
+    expect(applyAction(game, "p2", { type: "placeSettlement", vertexId: v2.id }).ok).toBe(true);
+  });
+});
+
 describe("win detection", () => {
   it("ends the game when a player reaches 10 victory points", () => {
     const game = newGame();
