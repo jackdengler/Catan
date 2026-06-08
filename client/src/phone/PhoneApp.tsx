@@ -26,7 +26,7 @@ export function PhoneApp() {
       socket.emit(
         "room:join",
         { roomCode: initialCode, name: "", color: "red", playerId: stored },
-        (res) => {
+        (res: { ok: boolean; playerId?: string; message?: string }) => {
           if (res.ok && res.playerId) setJoined({ roomCode: initialCode, playerId: res.playerId });
         }
       );

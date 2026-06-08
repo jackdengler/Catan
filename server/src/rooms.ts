@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { PLAYER_COLORS, type LobbyState, type PlayerColor } from "@catan/shared";
-import { createGame, type InternalGame } from "./game/state.js";
+import { createGame, type InternalGame } from "@catan/engine";
 
 export interface RoomPlayer {
   id: string;

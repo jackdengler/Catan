@@ -3,8 +3,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from "@catan/shared";
-import { applyAction } from "./game/actions.js";
-import { buildPayload } from "./game/state.js";
+import { applyAction, buildPayload } from "@catan/engine";
 import { RoomManager } from "./rooms.js";
 
 interface SocketData {

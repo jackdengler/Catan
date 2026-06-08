@@ -8,5 +8,5 @@
     "types": ["node", "vite/client"]
   },
   "include": ["src"],
-  "references": [{ "path": "../shared" }]
+  "references": [{ "path": "../shared" }, { "path": "../engine" }]
 }

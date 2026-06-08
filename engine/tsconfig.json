@@ -4,9 +4,8 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "noEmit": false,
-    "types": ["node"]
+    "noEmit": false
   },
   "include": ["src"],
-  "references": [{ "path": "../shared" }, { "path": "../engine" }]
+  "references": [{ "path": "../shared" }]
 }

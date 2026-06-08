@@ -5,6 +5,7 @@
   "type": "module",
   "workspaces": [
     "shared",
+    "engine",
     "server",
     "client"
   ],
@@ -15,7 +16,7 @@
     "build": "npm -w client run build",
     "start": "npm -w server run start",
     "typecheck": "tsc -b",
-    "test": "npm -w server run test"
+    "test": "npm -w engine run test"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",

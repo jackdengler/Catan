@@ -13,27 +13,19 @@ export function TvApp() {
   const [code, setCode] = useState<string | null>(null);
   const created = useRef(false);
 
+  // The board tab is always the host: create a room and advertise its code.
   useEffect(() => {
     if (created.current) return;
     created.current = true;
-    const urlCode = new URLSearchParams(window.location.search).get("room");
     const setup = () => {
-      if (urlCode) {
-        socket.emit("tv:join", { roomCode: urlCode }, (res) => {
-          if (res.ok) setCode(urlCode.toUpperCase());
-        });
-      } else {
-        socket.emit("room:create", (res) => {
-          setCode(res.roomCode);
-          const url = new URL(window.location.href);
-          url.searchParams.set("room", res.roomCode);
-          window.history.replaceState({}, "", url.toString());
-        });
-      }
+      socket.emit("room:create", (res: { roomCode: string }) => setCode(res.roomCode));
     };
     if (socket.connected) setup();
     else socket.once("connect", setup);
   }, []);
+
+  // Keep the screen awake — this tab is usually a phone being mirrored to a TV.
+  useKeepAwake();
 
   if (!game || game.phase === "lobby") {
     return <Lobby code={code} lobby={lobby} />;
@@ -41,9 +33,33 @@ export function TvApp() {
   return <TvGame code={code} game={game} />;
 }
 
+// Hold a screen wake lock (re-acquired when the tab becomes visible again).
+function useKeepAwake() {
+  useEffect(() => {
+    let lock: any = null;
+    const request = async () => {
+      try {
+        lock = await (navigator as any).wakeLock?.request("screen");
+      } catch {
+        /* unsupported or denied — ignore */
+      }
+    };
+    request();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") request();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      lock?.release?.().catch(() => {});
+    };
+  }, []);
+}
+
 function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof useGame>["lobby"] }) {
   const [qr, setQr] = useState<string>("");
-  const joinUrl = code ? `${window.location.origin}/?room=${code}` : "";
+  // Phones join at the app's own URL (preserving any Pages subpath) with ?room.
+  const joinUrl = code ? `${window.location.origin}${window.location.pathname}?room=${code}` : "";
 
   useEffect(() => {
     if (joinUrl) QRCode.toDataURL(joinUrl, { width: 260, margin: 1 }).then(setQr);

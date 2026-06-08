@@ -23,7 +23,7 @@ export function JoinScreen({ initialCode, onJoined }: Props) {
     setBusy(true);
     setError(null);
     const roomCode = code.trim().toUpperCase();
-    socket.emit("room:join", { roomCode, name: name.trim(), color }, (res) => {
+    socket.emit("room:join", { roomCode, name: name.trim(), color }, (res: { ok: boolean; playerId?: string; message?: string }) => {
       setBusy(false);
       if (res.ok && res.playerId) {
         localStorage.setItem(`catan_pid_${roomCode}`, res.playerId);

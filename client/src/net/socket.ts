@@ -1,21 +1,17 @@
-import { io, type Socket } from "socket.io-client";
-import type {
-  Action,
-  ClientToServerEvents,
-  ServerToClientEvents,
-} from "@catan/shared";
+import type { Action } from "@catan/shared";
+import { Transport } from "./transport.js";
+import { HostTransport } from "./peerHost.js";
+import { ClientTransport } from "./peerClient.js";
 
-// In dev the client is served by Vite (5173) and the server runs on 3001.
-// In production the same origin serves both.
-const URL = import.meta.env.DEV ? `http://${window.location.hostname}:3001` : "/";
+export function isTvRole(): boolean {
+  return new URLSearchParams(window.location.search).has("tv");
+}
 
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(URL, {
-  autoConnect: true,
-  transports: ["websocket"],
-});
+// One transport per tab: the board tab hosts; a phone is a client.
+export const socket: Transport = isTvRole() ? new HostTransport() : new ClientTransport();
 
 export function sendAction(action: Action): Promise<{ ok: boolean; message?: string }> {
   return new Promise((resolve) => {
-    socket.emit("action", action, (res) => resolve(res ?? { ok: true }));
+    socket.emit("action", action, (res: { ok: boolean; message?: string }) => resolve(res ?? { ok: true }));
   });
 }
