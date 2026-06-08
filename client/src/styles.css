@@ -310,11 +310,18 @@ button.tiny {
   padding: 12px;
   position: relative;
 }
+.phone-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.room-tag {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+}
 .leave-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 30;
   padding: 6px 12px;
   font-size: 0.8rem;
   background: transparent;
