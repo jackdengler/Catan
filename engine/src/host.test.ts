@@ -58,6 +58,26 @@ describe("GameHost", () => {
     expect(r.ok).toBe(true);
   });
 
+  it("serializes and restores an in-progress game with working maps", () => {
+    const host = new GameHost("SAVE");
+    host.addBot();
+    host.addBot();
+    host.forceStart();
+    for (let i = 0; i < 6; i++) host.botStep(); // place some setup pieces
+
+    // Round-trip through JSON like localStorage would.
+    const snap = JSON.parse(JSON.stringify(host.serialize()));
+    const restored = GameHost.restore(snap);
+
+    const before = host.payloadFor(null)!.public;
+    const after = restored.payloadFor(null)!.public;
+    expect(Object.keys(after.buildings).length).toBe(Object.keys(before.buildings).length);
+    expect(after.phase).toBe(before.phase);
+
+    // The engine still runs on the restored host (the Maps were rebuilt).
+    expect(restored.botStep().acted).toBe(true);
+  });
+
   it("lets a player reconnect by id after the game starts", () => {
     const host = new GameHost("RECO");
     const a = host.join("Alice", "red");

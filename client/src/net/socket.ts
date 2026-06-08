@@ -2,6 +2,17 @@ import type { Action } from "@catan/shared";
 import { Transport } from "./transport.js";
 import { HostTransport } from "./peerHost.js";
 import { ClientTransport } from "./peerClient.js";
+import { clearHostState, loadHostState } from "./hostSave.js";
+
+// Is there an in-progress host-and-play game saved on this device to resume?
+export function hasResumableHostGame(): boolean {
+  const s = loadHostState();
+  return !!(s && s.mode === "host" && s.host.game && !s.host.game.winner);
+}
+
+export function clearHostSave(): void {
+  clearHostState();
+}
 
 export function isTvRole(): boolean {
   return new URLSearchParams(window.location.search).has("tv");

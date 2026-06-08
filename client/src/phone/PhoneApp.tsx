@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PLAYER_COLORS, type GameStatePublic, type PlayerColor, type PrivateState, type Resource } from "@catan/shared";
-import { socket, sendAction, isHostPlayRole } from "../net/socket.js";
+import { socket, sendAction, isHostPlayRole, hasResumableHostGame, clearHostSave } from "../net/socket.js";
 import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
@@ -36,6 +36,18 @@ export function PhoneApp() {
     else socket.once("connect", tryRejoin);
   }, [initialCode, joined]);
 
+  // Host-and-play: if a game was saved on this device, resume it automatically
+  // after a refresh (skips the setup screen).
+  useEffect(() => {
+    if (!hostMode || joined || !hasResumableHostGame()) return;
+    const resume = () =>
+      socket.emit("host:create", { name: "", color: "red" }, (res: { roomCode: string; playerId?: string }) => {
+        if (res.playerId) setJoined({ roomCode: res.roomCode, playerId: res.playerId });
+      });
+    if (socket.connected) resume();
+    else socket.once("connect", resume);
+  }, [hostMode, joined]);
+
   // Once joined, make sure ?room=CODE is in the URL so a later refresh always
   // auto-reconnects — even if the player typed the code instead of scanning the
   // QR (which already carries it).
@@ -54,6 +66,7 @@ export function PhoneApp() {
   const leave = () => {
     if (!window.confirm("Leave this game?")) return;
     if (joined) localStorage.removeItem(`catan_pid_${joined.roomCode}`);
+    if (hostMode) clearHostSave(); // end the hosted game rather than resuming it
     window.location.reload();
   };
 

@@ -18,6 +18,13 @@ export interface HostPlayer {
   isBot: boolean;
 }
 
+// A serializable snapshot of a host's room, for persisting across a refresh.
+export interface HostSnapshot {
+  roomCode: string;
+  players: HostPlayer[];
+  game: InternalGame | null;
+}
+
 function uid(): string {
   // Available in modern browsers and Node 18+.
   return globalThis.crypto.randomUUID();
@@ -44,6 +51,41 @@ export class GameHost {
 
   get started(): boolean {
     return this.game !== null;
+  }
+
+  get inProgress(): boolean {
+    return !!this.game && !this.game.winner;
+  }
+
+  // ---- Persistence (so a host can survive a page refresh) ----------------
+
+  serialize(): HostSnapshot {
+    return { roomCode: this.roomCode, players: this.players, game: this.game };
+  }
+
+  static restore(snap: HostSnapshot): GameHost {
+    const host = new GameHost(snap.roomCode);
+    host.players = snap.players;
+    if (snap.game) {
+      const game = snap.game;
+      // Maps don't survive JSON; rebuild them from the (serializable) board.
+      game.hexById = new Map(game.board.hexes.map((h) => [h.id, h]));
+      game.vertexById = new Map(game.board.vertices.map((v) => [v.id, v]));
+      game.edgeById = new Map(game.board.edges.map((e) => [e.id, e]));
+      host.game = game;
+    }
+    return host;
+  }
+
+  // After a restore, only the local player (and bots) are actually connected;
+  // remote phones must re-establish their WebRTC links.
+  markConnections(localId: string | null): void {
+    for (const p of this.players) {
+      const connected = p.isBot || p.id === localId;
+      p.connected = connected;
+      const gp = this.game?.players.find((x) => x.id === p.id);
+      if (gp) gp.connected = connected;
+    }
   }
 
   private nextColor(preferred?: PlayerColor): PlayerColor {
