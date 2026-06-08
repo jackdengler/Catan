@@ -237,6 +237,19 @@ export function PhoneGame({ game, me, myId }: Props) {
           <div className="phone-board-view">
             <Board state={game} />
           </div>
+          <div className="board-actions">
+            <MiniHand me={me} />
+            {myTurn && game.phase === "roll" && (
+              <button className="primary" onClick={() => sendAction({ type: "rollDice" })}>
+                🎲 Roll
+              </button>
+            )}
+            {myTurn && game.phase === "main" && (
+              <button className="end" onClick={() => sendAction({ type: "endTurn" })}>
+                End turn ⏭
+              </button>
+            )}
+          </div>
         </section>
       </div>
 
@@ -366,6 +379,18 @@ function Hand({ game, me, myId }: { game: GameStatePublic; me: PrivateState | nu
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function MiniHand({ me }: { me: PrivateState | null }) {
+  return (
+    <div className="mini-hand">
+      {RESOURCES.map((r) => (
+        <span key={r} className="mini-hand-item">
+          {RESOURCE_EMOJI[r]} {me?.resources[r] ?? 0}
+        </span>
+      ))}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { GameStatePublic, PlayerColor } from "@catan/shared";
-import { PLAYER_FILL, PLAYER_STROKE, TERRAIN_FILL } from "./theme.js";
+import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI, RESOURCE_FILL, TERRAIN_FILL } from "./theme.js";
 
 interface BoardProps {
   state: GameStatePublic;
@@ -53,14 +53,29 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
                 <circle cx={h.x} cy={h.y} r={16} fill="#f3ead2" stroke="#5b4a2a" />
                 <text
                   x={h.x}
-                  y={h.y + 5}
+                  y={h.y + 1}
                   textAnchor="middle"
-                  fontSize={16}
+                  fontSize={15}
                   fontWeight={700}
                   fill={isRed ? "#c01616" : "#222"}
                 >
                   {h.numberToken}
                 </text>
+                {/* Probability dots: more dots = more likely. */}
+                {(() => {
+                  const pips = 6 - Math.abs(7 - h.numberToken);
+                  const gap = 3.4;
+                  const startX = h.x - ((pips - 1) * gap) / 2;
+                  return Array.from({ length: pips }).map((_, i) => (
+                    <circle
+                      key={i}
+                      cx={startX + i * gap}
+                      cy={h.y + 9}
+                      r={1.4}
+                      fill={isRed ? "#c01616" : "#333"}
+                    />
+                  ));
+                })()}
               </g>
             )}
             {selectableHex && (
@@ -77,15 +92,26 @@ export function Board({ state, selectable = null, highlight, onSelect }: BoardPr
         );
       })}
 
-      {/* Ports */}
-      {board.ports.map((port) => (
-        <g key={port.id} pointerEvents="none">
-          <circle cx={port.x} cy={port.y} r={13} fill="#2b3a55" stroke="#dfe7f5" />
-          <text x={port.x} y={port.y + 4} textAnchor="middle" fontSize={10} fill="#fff" fontWeight={700}>
-            {port.type === "any" ? "3:1" : "2:1"}
-          </text>
-        </g>
-      ))}
+      {/* Ports: ratio + which resource, with docks to the two access vertices */}
+      {board.ports.map((port) => {
+        const v1 = vById.get(port.vertices[0]);
+        const v2 = vById.get(port.vertices[1]);
+        const isAny = port.type === "any";
+        const fill = isAny ? "#2b3a55" : RESOURCE_FILL[port.type];
+        return (
+          <g key={port.id} pointerEvents="none">
+            {v1 && <line x1={port.x} y1={port.y} x2={v1.x} y2={v1.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
+            {v2 && <line x1={port.x} y1={port.y} x2={v2.x} y2={v2.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
+            <circle cx={port.x} cy={port.y} r={15} fill={fill} stroke="#fff" strokeWidth={1.5} />
+            <text x={port.x} y={port.y - 2} textAnchor="middle" fontSize={10} fill="#fff" fontWeight={800}>
+              {isAny ? "3:1" : "2:1"}
+            </text>
+            <text x={port.x} y={port.y + 9} textAnchor="middle" fontSize={isAny ? 8 : 10} fill="#fff" fontWeight={700}>
+              {isAny ? "any" : RESOURCE_EMOJI[port.type]}
+            </text>
+          </g>
+        );
+      })}
 
       {/* Robber */}
       {robber && (

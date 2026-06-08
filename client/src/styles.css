@@ -534,6 +534,31 @@ button.tiny {
 .phone-board-view .board-svg {
   height: 100%;
 }
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 2px;
+}
+.board-actions button {
+  padding: 12px 16px;
+  font-size: 1rem;
+}
+.board-actions .end {
+  background: var(--sea);
+}
+.mini-hand {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 700;
+}
+.mini-hand-item {
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
 
 /* Resources collected on a roll */
 .roll-gain {
