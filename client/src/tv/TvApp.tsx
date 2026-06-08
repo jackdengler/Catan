@@ -65,6 +65,8 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
     if (joinUrl) QRCode.toDataURL(joinUrl, { width: 260, margin: 1 }).then(setQr);
   }, [joinUrl]);
 
+  const playerCount = lobby?.players.length ?? 0;
+
   return (
     <div className="tv-lobby">
       <h1>Catan</h1>
@@ -83,12 +85,26 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
             <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
             {p.name}
             {p.isHost && <span className="host-tag">host</span>}
-            {!p.connected && <span className="offline">offline</span>}
+            {p.isBot && <span className="bot-tag">bot</span>}
+            {!p.connected && !p.isBot && <span className="offline">offline</span>}
+            {p.isBot && (
+              <button className="remove-bot" onClick={() => socket.removeBot(p.id)} title="Remove bot">
+                ✕
+              </button>
+            )}
           </div>
         ))}
         {(!lobby || lobby.players.length === 0) && <div className="muted">Waiting for players…</div>}
       </div>
-      <p className="muted">The host starts the game from their phone once everyone has joined.</p>
+      <div className="lobby-controls">
+        <button className="ghost" disabled={playerCount >= 4} onClick={() => socket.addBot()}>
+          + Add computer player
+        </button>
+        <button className="primary" disabled={playerCount < 2} onClick={() => socket.startHostGame()}>
+          Start game
+        </button>
+      </div>
+      <p className="muted">A human host can also start from their phone.</p>
     </div>
   );
 }

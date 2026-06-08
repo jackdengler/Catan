@@ -123,6 +123,7 @@ export class RoomManager {
         color: p.color,
         connected: p.connected,
         isHost: p.isHost,
+        isBot: false,
       })),
     };
   }

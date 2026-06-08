@@ -186,6 +186,32 @@ button.tiny {
   color: #e07a7a;
   font-size: 0.8rem;
 }
+.bot-tag {
+  font-size: 0.7rem;
+  background: #4a6fa5;
+  color: #fff;
+  border-radius: 6px;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+.remove-bot {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 0.8rem;
+  background: transparent;
+  border: 1px solid var(--panel-2);
+  color: var(--muted);
+  border-radius: 6px;
+}
+.lobby-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.lobby-controls button {
+  font-size: 1.1rem;
+  padding: 12px 20px;
+}
 
 .tv-game {
   display: grid;
@@ -328,6 +354,32 @@ button.tiny {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+.board-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.board-overlay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+.board-overlay-canvas {
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+}
+.board-overlay-canvas .board-svg {
+  height: 100%;
 }
 .room-tag {
   color: var(--muted);

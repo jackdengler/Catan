@@ -41,6 +41,23 @@ describe("GameHost", () => {
     expect(host.join("Carol", "white").ok).toBe(false);
   });
 
+  it("adds bots, force-starts, and steps a bot", () => {
+    const host = new GameHost("BT");
+    host.addBot();
+    host.addBot();
+    const lobby = host.lobby();
+    expect(lobby.players.length).toBe(2);
+    expect(lobby.players.every((p) => p.isBot)).toBe(true);
+
+    expect(host.forceStart().ok).toBe(true);
+    expect(host.started).toBe(true);
+    // First setup placement is owed by a bot.
+    expect(host.hasPendingBotStep()).toBe(true);
+    const r = host.botStep();
+    expect(r.acted).toBe(true);
+    expect(r.ok).toBe(true);
+  });
+
   it("lets a player reconnect by id after the game starts", () => {
     const host = new GameHost("RECO");
     const a = host.join("Alice", "red");

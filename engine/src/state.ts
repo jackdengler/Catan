@@ -29,6 +29,7 @@ export interface InternalPlayer {
   color: PlayerColor;
   connected: boolean;
   isHost: boolean;
+  isBot: boolean;
   resources: ResourceCount;
   devCards: DevCard[];
   playedKnights: number;
@@ -79,7 +80,14 @@ function shuffle<T>(arr: T[]): T[] {
 
 export function createGame(
   roomCode: string,
-  lobbyPlayers: { id: string; name: string; color: PlayerColor; isHost: boolean; connected: boolean }[]
+  lobbyPlayers: {
+    id: string;
+    name: string;
+    color: PlayerColor;
+    isHost: boolean;
+    connected: boolean;
+    isBot?: boolean;
+  }[]
 ): InternalGame {
   const { layout, robberHex } = generateBoard();
 
@@ -93,6 +101,7 @@ export function createGame(
     color: p.color,
     connected: p.connected,
     isHost: p.isHost,
+    isBot: p.isBot ?? false,
     resources: EMPTY_RESOURCES(),
     devCards: [],
     playedKnights: 0,
@@ -198,6 +207,7 @@ function toPublicPlayer(game: InternalGame, p: InternalPlayer): PublicPlayer {
     color: p.color,
     connected: p.connected,
     isHost: p.isHost,
+    isBot: p.isBot,
     resourceTotal: totalResources(p),
     devCardTotal: p.devCards.length,
     playedKnights: p.playedKnights,

@@ -14,11 +14,30 @@ export interface RelayConn {
 // back out to every connected phone, plus the local board view.
 export class HostRelay {
   private conns = new Map<RelayConn, string>(); // conn -> playerId
+  private botTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public readonly host: GameHost,
     private onLocal: (lobby: LobbyState, payload: StatePayload | null) => void
   ) {}
+
+  // Lobby controls available to the board tab.
+  addBot(): { ok: boolean; message?: string } {
+    const res = this.host.addBot();
+    this.broadcast();
+    return res;
+  }
+
+  removeBot(id: string): void {
+    this.host.removeBot(id);
+    this.broadcast();
+  }
+
+  start(): { ok: boolean; message?: string } {
+    const res = this.host.forceStart();
+    this.broadcast();
+    return res;
+  }
 
   handle(conn: RelayConn, msg: ClientMessage): void {
     if (msg.kind === "join") {
@@ -61,5 +80,24 @@ export class HostRelay {
       if (payload) conn.send({ kind: "state", payload });
     }
     this.onLocal(lobby, this.host.payloadFor(null));
+    this.scheduleBots();
+  }
+
+  // After any state change, if a bot needs to act, do it on a short delay so
+  // moves are visible and paced. Re-broadcasting reschedules the next step.
+  private scheduleBots(): void {
+    if (this.botTimer) return;
+    const step = this.host.botStep.bind(this.host);
+    // Peek without applying: only schedule if there is something to do.
+    if (!this.host.hasPendingBotStep()) return;
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      const res = step();
+      if (res.acted && !res.ok && res.playerId) {
+        // A bad bot move shouldn't stall the game — end its turn defensively.
+        this.host.action(res.playerId, { type: "endTurn" });
+      }
+      this.broadcast();
+    }, 650);
   }
 }

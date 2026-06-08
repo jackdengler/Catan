@@ -54,6 +54,18 @@ export class HostTransport extends Transport {
     });
   }
 
+  addBot(): void {
+    this.relay?.addBot();
+  }
+
+  removeBot(id: string): void {
+    this.relay?.removeBot(id);
+  }
+
+  startHostGame(): void {
+    this.relay?.start();
+  }
+
   private attach(conn: DataConnection): void {
     const relayConn: RelayConn = {
       get open() {

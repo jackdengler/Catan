@@ -7,6 +7,7 @@ import {
 } from "@catan/shared";
 import { applyAction } from "./actions.js";
 import { buildPayload, createGame, type InternalGame } from "./state.js";
+import { computeBotStep } from "./bot.js";
 
 export interface HostPlayer {
   id: string;
@@ -14,6 +15,7 @@ export interface HostPlayer {
   color: PlayerColor;
   connected: boolean;
   isHost: boolean;
+  isBot: boolean;
 }
 
 function uid(): string {
@@ -75,10 +77,56 @@ export class GameHost {
       name: cleanName,
       color: this.nextColor(color),
       connected: true,
-      isHost: this.players.length === 0,
+      isHost: !this.players.some((p) => !p.isBot), // first human is the host
+      isBot: false,
     };
     this.players.push(player);
     return { ok: true, playerId: player.id };
+  }
+
+  // Add a computer player to the lobby.
+  addBot(): { ok: boolean; message?: string } {
+    if (this.game) return { ok: false, message: "Game already started" };
+    if (this.players.length >= 4) return { ok: false, message: "Room is full" };
+    const n = this.players.filter((p) => p.isBot).length + 1;
+    this.players.push({
+      id: uid(),
+      name: `Bot ${n}`,
+      color: this.nextColor(),
+      connected: true,
+      isHost: false,
+      isBot: true,
+    });
+    return { ok: true };
+  }
+
+  removeBot(id: string): void {
+    if (this.game) return;
+    const i = this.players.findIndex((p) => p.id === id && p.isBot);
+    if (i >= 0) this.players.splice(i, 1);
+  }
+
+  // Start without requiring a specific host (used by the board's own button).
+  forceStart(): { ok: boolean; message?: string } {
+    if (this.game) return { ok: false, message: "Already started" };
+    if (this.players.length < 2) return { ok: false, message: "Need at least 2 players" };
+    this.game = createGame(this.roomCode, this.players);
+    return { ok: true };
+  }
+
+  // Whether any bot currently owes an action (used to decide whether to schedule).
+  hasPendingBotStep(): boolean {
+    return !!this.game && computeBotStep(this.game) !== null;
+  }
+
+  // Compute and apply one pending bot action. Returns whether a bot acted (and
+  // whether it succeeded) so the host can pace and recover from a bad move.
+  botStep(): { acted: boolean; ok: boolean; playerId?: string } {
+    if (!this.game) return { acted: false, ok: true };
+    const step = computeBotStep(this.game);
+    if (!step) return { acted: false, ok: true };
+    const res = applyAction(this.game, step.playerId, step.action);
+    return { acted: true, ok: res.ok, playerId: step.playerId };
   }
 
   setConnected(playerId: string, connected: boolean): void {
@@ -113,6 +161,7 @@ export class GameHost {
         color: p.color,
         connected: p.connected,
         isHost: p.isHost,
+        isBot: p.isBot,
       })),
     };
   }

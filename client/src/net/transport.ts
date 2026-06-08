@@ -37,4 +37,9 @@ export abstract class Transport {
 
   // Outgoing commands. The last argument may be an ack callback (Socket.IO style).
   abstract emit(event: OutEvent, ...args: any[]): void;
+
+  // Board-only lobby controls (no-ops on a phone client).
+  addBot(): void {}
+  removeBot(_id: string): void {}
+  startHostGame(): void {}
 }

@@ -106,6 +106,7 @@ export interface PublicPlayer {
   color: PlayerColor;
   connected: boolean;
   isHost: boolean;
+  isBot: boolean;
   resourceTotal: number; // number of resource cards (hidden which)
   devCardTotal: number; // number of dev cards (hidden which)
   playedKnights: number;
@@ -235,6 +236,7 @@ export interface LobbyPlayer {
   color: PlayerColor;
   connected: boolean;
   isHost: boolean;
+  isBot: boolean;
 }
 
 export interface LobbyState {
