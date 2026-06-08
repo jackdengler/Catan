@@ -4,11 +4,7 @@ name: Deploy to GitHub Pages
 # Enable once in the repo: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
 on:
   push:
-    # `main`/`master` for the normal case, plus the current default branch so
-    # the Pages environment (which only permits deploys from the default branch)
-    # accepts the run. Once `main` is made the default branch, the extra line
-    # can be removed.
-    branches: [main, master, claude/peaceful-fermat-52fA8]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
