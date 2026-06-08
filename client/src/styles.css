@@ -174,7 +174,76 @@ button.tiny {
   50% { opacity: 0.4; }
 }
 
+/* Swipe page dots */
+.swipe-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0 2px;
+}
+.swipe-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.swipe-dot i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  display: inline-block;
+}
+.swipe-dot.on i {
+  background: var(--accent);
+}
+.swipe-dot em {
+  font-style: normal;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* Build-costs reference page */
+.costs-page {
+  padding: 6px 12px;
+  overflow-y: auto;
+}
+.build-costs h3 {
+  margin: 12px 0 6px;
+}
+.build-costs .vp-head {
+  margin-top: 18px;
+}
+.cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+}
+.cost-label {
+  font-weight: 600;
+}
+.cost-icons {
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+}
+.cost-vp {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 /* Phone log page */
+.phone-log-head {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 6px 0;
+}
 .log-page {
   display: flex;
   flex-direction: column;

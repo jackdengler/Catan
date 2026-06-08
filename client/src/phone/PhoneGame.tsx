@@ -8,6 +8,7 @@ import type {
 import { RESOURCES } from "@catan/shared";
 import { sendAction } from "../net/socket.js";
 import { Board } from "../game/Board.js";
+import { BuildCosts } from "../game/BuildCosts.js";
 import { EventBanner } from "../game/EventBanner.js";
 import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, RESOURCE_EMOJI } from "../game/theme.js";
@@ -41,6 +42,10 @@ export function PhoneGame({ game, me, myId }: Props) {
 
   // Animate the resources this player gains on each dice roll.
   const rollGain = useRollGain(game, me);
+
+  // Track which swipe page is showing (for the dots indicator).
+  const [page, setPage] = useState(0);
+  const PAGES = ["Play", "Board", "Costs", "Log"];
 
   // Reset transient UI when the turn or phase changes.
   useEffect(() => {
@@ -222,7 +227,12 @@ export function PhoneGame({ game, me, myId }: Props) {
     <>
       {rollGain && <RollGainToast gain={rollGain} />}
       <EventBanner log={game.log} />
-      <div className="swipe">
+      <div
+        className="swipe"
+        onScroll={(e) =>
+          setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))
+        }
+      >
         <section className="swipe-page">
           <PlayPanel
             game={game}
@@ -236,7 +246,6 @@ export function PhoneGame({ game, me, myId }: Props) {
           />
         </section>
         <section className="swipe-page board-page">
-          <div className="page-hint">◀ actions · log ▶</div>
           <div className="phone-board-view">
             <Board state={game} animate />
           </div>
@@ -255,8 +264,11 @@ export function PhoneGame({ game, me, myId }: Props) {
             )}
           </div>
         </section>
+        <section className="swipe-page costs-page">
+          <BuildCosts />
+        </section>
         <section className="swipe-page log-page">
-          <div className="page-hint">◀ swipe for board</div>
+          <div className="phone-log-head">Game log</div>
           <div className="log phone-log">
             {[...game.log].reverse().map((l) => (
               <div key={l.id} className={`log-line ${l.major ? "major" : ""}`}>
@@ -265,6 +277,14 @@ export function PhoneGame({ game, me, myId }: Props) {
             ))}
           </div>
         </section>
+      </div>
+      <div className="swipe-dots">
+        {PAGES.map((name, i) => (
+          <span key={name} className={`swipe-dot ${i === page ? "on" : ""}`}>
+            <i />
+            {i === page && <em>{name}</em>}
+          </span>
+        ))}
       </div>
 
       {showDev && me && <DevMenu game={game} me={me} onClose={() => setShowDev(false)} />}

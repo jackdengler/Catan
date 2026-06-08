@@ -19,6 +19,7 @@ export class HostTransport extends Transport {
   protected localPlayerId: string | null = null;
   private mode: "tv" | "host" = "tv";
   private restored = false;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -49,9 +50,18 @@ export class HostTransport extends Transport {
       // Local view = the seated player's hand (?host), or spectator (?tv).
       const payload = host.payloadFor(this.localPlayerId);
       if (payload) this.dispatch("state", payload);
-      // Persist after every change so a refresh can resume.
-      saveHostState({ mode: this.mode, localPlayerId: this.localPlayerId, host: host.serialize() });
+      this.queueSave(host);
     });
+  }
+
+  // Persist so a refresh can resume, but at most ~once/700ms — serializing the
+  // whole game on every bot micro-step would jank a phone host.
+  private queueSave(host: GameHost): void {
+    if (this.saveTimer) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      saveHostState({ mode: this.mode, localPlayerId: this.localPlayerId, host: host.serialize() });
+    }, 700);
   }
 
   private createRoom(
