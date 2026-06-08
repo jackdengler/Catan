@@ -4,14 +4,22 @@ import { Transport, type OutEvent } from "./transport.js";
 import { peerIdForRoom, type HostMessage } from "./messages.js";
 import { peerOptions } from "./peerConfig.js";
 
-// A player's phone. Connects to the board tab over WebRTC and exchanges
-// join/action/state messages.
+interface JoinInfo {
+  roomCode: string;
+  name: string;
+  color: PlayerColor;
+  playerId?: string;
+}
+
+// A player's phone. Connects to the board tab over WebRTC and, if the
+// connection drops mid-game, keeps trying to reconnect and rejoin with the
+// same player id so the player gets their hand back.
 export class ClientTransport extends Transport {
   private peer: Peer | null = null;
   private conn: DataConnection | null = null;
-  private pendingJoin:
-    | { cb?: (res: { ok: boolean; playerId?: string; message?: string }) => void; name: string; color: PlayerColor; playerId?: string }
-    | null = null;
+  private join: JoinInfo | null = null;
+  private joinCb?: (res: { ok: boolean; playerId?: string; message?: string }) => void;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     super();
@@ -21,9 +29,9 @@ export class ClientTransport extends Transport {
 
   emit(event: OutEvent, ...args: any[]): void {
     if (event === "room:join") {
-      const data = args[0] as { roomCode: string; name: string; color: PlayerColor; playerId?: string };
-      const cb = args[1] as ((res: { ok: boolean; playerId?: string; message?: string }) => void) | undefined;
-      this.connectToRoom(data, cb);
+      this.join = { ...(args[0] as JoinInfo) };
+      this.joinCb = args[1];
+      this.connect();
     } else if (event === "action") {
       const action = args[0];
       const cb = args[1] as ((res: { ok: boolean }) => void) | undefined;
@@ -32,59 +40,82 @@ export class ClientTransport extends Transport {
     }
   }
 
-  private connectToRoom(
-    data: { roomCode: string; name: string; color: PlayerColor; playerId?: string },
-    cb?: (res: { ok: boolean; playerId?: string; message?: string }) => void
-  ): void {
-    // Reuse an existing connection (e.g. a retry) if already open.
-    if (this.conn?.open) {
-      this.pendingJoin = { cb, name: data.name, color: data.color, playerId: data.playerId };
-      this.conn.send({ kind: "join", name: data.name, color: data.color, playerId: data.playerId });
-      return;
+  private connect(): void {
+    if (!this.join) return;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    try {
+      this.peer?.destroy();
+    } catch {
+      /* ignore */
     }
 
     const peer = new Peer(peerOptions());
     this.peer = peer;
-    this.pendingJoin = { cb, name: data.name, color: data.color, playerId: data.playerId };
 
     peer.on("open", () => {
-      const conn = peer.connect(peerIdForRoom(data.roomCode), { reliable: true });
+      const conn = peer.connect(peerIdForRoom(this.join!.roomCode), { reliable: true });
       this.conn = conn;
       conn.on("open", () => {
-        conn.send({ kind: "join", name: data.name, color: data.color, playerId: data.playerId });
+        conn.send({
+          kind: "join",
+          name: this.join!.name,
+          color: this.join!.color,
+          playerId: this.join!.playerId,
+        });
       });
       conn.on("data", (raw) => this.onData(raw as HostMessage));
-      conn.on("close", () => {
-        this.connected = false;
-        this.dispatch("disconnect");
-      });
+      conn.on("close", () => this.handleDrop());
     });
 
     peer.on("error", (err: any) => {
-      const message =
-        err?.type === "peer-unavailable" ? "Room not found" : `Connection error: ${err?.type ?? err}`;
-      if (this.pendingJoin?.cb) {
-        this.pendingJoin.cb({ ok: false, message });
-        this.pendingJoin = null;
-      } else {
-        this.dispatch("error", { message });
+      // Wrong room code on the very first attempt -> tell the join screen.
+      if (this.joinCb && err?.type === "peer-unavailable") {
+        this.joinCb({ ok: false, message: "Room not found" });
+        this.joinCb = undefined;
+        return;
       }
+      // Otherwise it's a transient/host-down error: keep retrying.
+      this.handleDrop();
     });
+  }
+
+  // Connection lost: surface it and schedule a retry. Reconnection keeps the
+  // stored player id, so the host restores the player's hand.
+  private handleDrop(): void {
+    if (this.connected) {
+      this.connected = false;
+      this.dispatch("disconnect");
+    }
+    if (this.reconnectTimer || !this.join) return;
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, 2000);
   }
 
   private onData(msg: HostMessage): void {
     switch (msg.kind) {
       case "joined": {
-        const join = this.pendingJoin;
-        this.pendingJoin = null;
-        join?.cb?.({ ok: true, playerId: msg.playerId });
+        if (this.join) this.join.playerId = msg.playerId; // remember for reconnects
+        if (this.joinCb) {
+          this.joinCb({ ok: true, playerId: msg.playerId });
+          this.joinCb = undefined;
+        }
+        if (!this.connected) {
+          this.connected = true;
+          this.dispatch("connect");
+        }
         this.dispatch("room:joined", { playerId: msg.playerId });
         break;
       }
       case "rejected": {
-        const join = this.pendingJoin;
-        this.pendingJoin = null;
-        join?.cb?.({ ok: false, message: msg.message });
+        if (this.joinCb) {
+          this.joinCb({ ok: false, message: msg.message });
+          this.joinCb = undefined;
+        }
         break;
       }
       case "lobby":

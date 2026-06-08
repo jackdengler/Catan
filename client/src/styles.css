@@ -310,6 +310,19 @@ button.tiny {
   padding: 12px;
   position: relative;
 }
+.reconnect-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  text-align: center;
+  padding: 6px;
+  background: #b8860b;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
 .phone-topbar {
   display: flex;
   align-items: center;

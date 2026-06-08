@@ -12,7 +12,7 @@ interface Joined {
 }
 
 export function PhoneApp() {
-  const { lobby, game, me, error } = useGame();
+  const { lobby, game, me, error, connected } = useGame();
   const [joined, setJoined] = useState<Joined | null>(null);
 
   const initialCode = new URLSearchParams(window.location.search).get("room")?.toUpperCase() ?? "";
@@ -51,6 +51,7 @@ export function PhoneApp() {
   return (
     <div className="phone">
       {error && <div className="toast">{error}</div>}
+      {!connected && <div className="reconnect-banner">Reconnecting…</div>}
       <div className="phone-topbar">
         <span className="room-tag">Room {joined.roomCode}</span>
         <button className="leave-btn" onClick={leave}>

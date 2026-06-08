@@ -27,6 +27,11 @@ export class HostRelay {
         conn.send({ kind: "rejected", message: res.message ?? "Could not join" });
         return;
       }
+      // Drop any stale connection for this same player (a reconnect arrives on
+      // a new conn; the old one's later close must not mark them offline).
+      for (const [c, id] of this.conns) {
+        if (id === res.playerId && c !== conn) this.conns.delete(c);
+      }
       this.conns.set(conn, res.playerId);
       conn.send({ kind: "joined", playerId: res.playerId });
       this.broadcast();
