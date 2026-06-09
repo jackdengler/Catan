@@ -88,19 +88,19 @@ export function DevMenu({
             <DevButton
               label="🛣️ Road Building"
               count={roads}
-              disabled={game.hasPlayedDevCard || game.phase !== "main"}
+              disabled={game.hasPlayedDevCard || (game.phase !== "main" && game.phase !== "roll")}
               onClick={() => play(() => sendAction({ type: "playRoadBuilding" }))}
             />
             <DevButton
               label="🎁 Year of Plenty"
               count={yopCount}
-              disabled={game.hasPlayedDevCard || game.phase !== "main"}
+              disabled={game.hasPlayedDevCard || (game.phase !== "main" && game.phase !== "roll")}
               onClick={() => setShowYop(true)}
             />
             <DevButton
               label="💰 Monopoly"
               count={mono}
-              disabled={game.hasPlayedDevCard || game.phase !== "main"}
+              disabled={game.hasPlayedDevCard || (game.phase !== "main" && game.phase !== "roll")}
               onClick={() => setShowMono(true)}
             />
             {vp > 0 && <div className="dev-vp">⭐ {vp} hidden victory point{vp > 1 ? "s" : ""}</div>}

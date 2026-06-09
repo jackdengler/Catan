@@ -92,7 +92,7 @@ export function PhoneGame({ game, me, myId }: Props) {
       };
     }
 
-    if (myTurn && game.phase === "main" && game.freeRoads > 0) {
+    if (myTurn && (game.phase === "main" || game.phase === "roll") && game.freeRoads > 0) {
       return {
         title: `Place a free road (${game.freeRoads} left)`,
         selectable: "edge" as const,

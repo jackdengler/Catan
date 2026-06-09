@@ -260,6 +260,83 @@ describe("house rules", () => {
   });
 });
 
+describe("longest road ties (official rule)", () => {
+  // Build a fresh disjoint road chain of `len` for a player, avoiding `forbidden`.
+  function chain(game: ReturnType<typeof newGame>, pid: string, len: number, forbidden: Set<string>) {
+    const start = game.board.vertices.find(
+      (v) => !forbidden.has(v.id) && v.adjacent.every((a) => !forbidden.has(a)) && v.edges.some((e) => !game.roads[e])
+    );
+    if (!start) return 0;
+    const used = new Set<string>([start.id]);
+    forbidden.add(start.id);
+    let cur = start.id;
+    let placed = 0;
+    while (placed < len) {
+      const vtx = game.vertexById.get(cur)!;
+      const edge = vtx.edges
+        .map((e) => game.edgeById.get(e)!)
+        .find((e) => {
+          const other = e.v1 === cur ? e.v2 : e.v1;
+          return !game.roads[e.id] && !used.has(other) && !forbidden.has(other);
+        });
+      if (!edge) break;
+      game.roads[edge.id] = pid;
+      const next = edge.v1 === cur ? edge.v2 : edge.v1;
+      used.add(next);
+      forbidden.add(next);
+      cur = next;
+      placed++;
+    }
+    return placed;
+  }
+
+  it("the holder keeps the card when another player only ties", () => {
+    const game = newGame();
+    const forbidden = new Set<string>();
+    expect(chain(game, "p1", 5, forbidden)).toBe(5);
+    recomputeLongestRoad(game);
+    expect(game.longestRoadHolder).toBe("p1");
+
+    expect(chain(game, "p2", 5, forbidden)).toBe(5); // disjoint, equal length
+    recomputeLongestRoad(game);
+    expect(game.longestRoadHolder).toBe("p1"); // tie -> holder keeps it
+  });
+
+  it("sets the card aside when challengers tie with no holder", () => {
+    const game = newGame();
+    const forbidden = new Set<string>();
+    expect(chain(game, "p1", 5, forbidden)).toBe(5);
+    expect(chain(game, "p2", 5, forbidden)).toBe(5);
+    recomputeLongestRoad(game);
+    expect(game.longestRoadHolder).toBeNull(); // tie among challengers -> unclaimed
+  });
+});
+
+describe("trade counteroffers", () => {
+  it("lets a responder counter and the proposer accept the counter", () => {
+    const game = newGame();
+    game.phase = "main";
+    game.hasRolled = true;
+    game.currentPlayerIndex = 0;
+    const p1 = game.players[0];
+    const p2 = game.players[1];
+    p1.resources = { wood: 2, brick: 0, sheep: 0, wheat: 0, ore: 0 };
+    p2.resources = { wood: 0, brick: 0, sheep: 2, wheat: 0, ore: 0 };
+
+    expect(applyAction(game, "p1", { type: "proposeTrade", give: { wood: 1 }, receive: { sheep: 1 } }).ok).toBe(true);
+    // p2 counters: gives 2 sheep, wants 2 wood
+    expect(applyAction(game, "p2", { type: "counterTrade", give: { sheep: 2 }, receive: { wood: 2 } }).ok).toBe(true);
+    expect(game.pendingTrade!.responses["p2"].status).toBe("counter");
+    // p1 accepts the counter
+    expect(applyAction(game, "p1", { type: "acceptTradeWith", playerId: "p2" }).ok).toBe(true);
+    expect(game.pendingTrade).toBeNull();
+    expect(p1.resources.wood).toBe(0);
+    expect(p1.resources.sheep).toBe(2);
+    expect(p2.resources.sheep).toBe(0);
+    expect(p2.resources.wood).toBe(2);
+  });
+});
+
 describe("win detection", () => {
   it("ends the game when a player reaches 10 victory points", () => {
     const game = newGame();

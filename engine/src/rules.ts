@@ -185,53 +185,37 @@ export function recomputeRoadLengths(game: InternalGame): void {
   }
 }
 
+// Recompute the Longest Road holder per the official rules:
+//  - A road of >= 5 segments qualifies.
+//  - The current holder keeps the card as long as they still (co-)hold the
+//    longest road — another player must build a STRICTLY longer road to take it.
+//  - If the holder no longer has the longest and a single other player is
+//    clearly longest, that player takes it.
+//  - If two or more players tie for the new longest (holder not among them), or
+//    no one has a 5+ road, the card is set aside until someone leads again.
 export function recomputeLongestRoad(game: InternalGame): void {
   recomputeRoadLengths(game);
   const holder = game.longestRoadHolder;
-  const holderLen = holder ? game.players.find((p) => p.id === holder)?.roadLength ?? 0 : 0;
+  const maxLen = Math.max(0, ...game.players.map((p) => p.roadLength));
 
-  // Need at least 5 to hold the title.
-  let bestLen = 4;
-  let bestPlayer: string | null = null;
-  for (const p of game.players) {
-    if (p.roadLength > bestLen) {
-      bestLen = p.roadLength;
-      bestPlayer = p.id;
-    } else if (p.roadLength === bestLen) {
-      // tie -> ambiguous, no new claim unless current holder is in the tie
-      bestPlayer = bestPlayer === null ? null : bestPlayer;
+  let next: string | null;
+  if (maxLen < 5) {
+    next = null;
+  } else {
+    const leaders = game.players.filter((p) => p.roadLength === maxLen);
+    if (holder && leaders.some((p) => p.id === holder)) {
+      next = holder; // still (tied for) longest -> keeps it
+    } else if (leaders.length === 1) {
+      next = leaders[0].id; // a single clear leader takes/earns it
+    } else {
+      next = null; // tie among challengers -> set aside until someone leads
     }
   }
 
-  if (holder) {
-    // Current holder keeps it unless someone strictly exceeds them, or the
-    // holder dropped below 5.
-    if (holderLen < 5) {
-      game.longestRoadHolder = bestPlayer && bestLen >= 5 ? bestPlayer : null;
-      if (game.longestRoadHolder) {
-        addLog(game, `${nameOf(game, game.longestRoadHolder)} takes Longest Road.`, undefined, true);
-      }
-      return;
-    }
-    let challenger: string | null = null;
-    let challengerLen = holderLen;
-    for (const p of game.players) {
-      if (p.id !== holder && p.roadLength > challengerLen) {
-        challengerLen = p.roadLength;
-        challenger = p.id;
-      }
-    }
-    if (challenger) {
-      game.longestRoadHolder = challenger;
-      addLog(game, `${nameOf(game, challenger)} takes Longest Road.`, undefined, true);
-    }
-  } else if (bestPlayer && bestLen >= 5) {
-    // Award only if unambiguous leader with >= 5.
-    const leaders = game.players.filter((p) => p.roadLength === bestLen);
-    if (leaders.length === 1) {
-      game.longestRoadHolder = bestPlayer;
-      addLog(game, `${nameOf(game, bestPlayer)} earns Longest Road.`, undefined, true);
-    }
+  if (next !== holder) {
+    game.longestRoadHolder = next;
+    if (next) addLog(game, `${nameOf(game, next)} takes Longest Road.`, undefined, true);
+    else addLog(game, `Longest Road is up for grabs.`, undefined, true);
   }
 }
 

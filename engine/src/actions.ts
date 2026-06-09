@@ -5,6 +5,7 @@ import {
   VICTORY_POINTS_TO_WIN,
   type Action,
   type DevCard,
+  type PendingTrade,
   type Resource,
   type ResourceCount,
 } from "@catan/shared";
@@ -81,6 +82,8 @@ export function applyAction(
       return handleProposeTrade(game, actor, action.give, action.receive);
     case "respondTrade":
       return handleRespondTrade(game, actor, action.accept);
+    case "counterTrade":
+      return handleCounterTrade(game, actor, action.give, action.receive);
     case "acceptTradeWith":
       return handleAcceptTradeWith(game, actor, action.playerId);
     case "cancelTrade":
@@ -432,7 +435,8 @@ function handlePlayKnight(game: InternalGame, actor: InternalPlayer): ActionResu
 }
 
 function handlePlayRoadBuilding(game: InternalGame, actor: InternalPlayer): ActionResult {
-  if (game.phase !== "main" || !isCurrent(game, actor)) return err("Not your turn");
+  // A development card may be played any time during your turn (incl. before rolling).
+  if ((game.phase !== "main" && game.phase !== "roll") || !isCurrent(game, actor)) return err("Not your turn");
   if (actor.hasPlayedDevThisTurn) return err("Already played a dev card this turn");
   if (playableDevCards(game, actor, "roadBuilding").length === 0) return err("No playable card");
 
@@ -448,7 +452,7 @@ function handleYearOfPlenty(
   actor: InternalPlayer,
   resources: [Resource, Resource]
 ): ActionResult {
-  if (game.phase !== "main" || !isCurrent(game, actor)) return err("Not your turn");
+  if ((game.phase !== "main" && game.phase !== "roll") || !isCurrent(game, actor)) return err("Not your turn");
   if (actor.hasPlayedDevThisTurn) return err("Already played a dev card this turn");
   if (playableDevCards(game, actor, "yearOfPlenty").length === 0) return err("No playable card");
 
@@ -464,7 +468,7 @@ function handleYearOfPlenty(
 }
 
 function handleMonopoly(game: InternalGame, actor: InternalPlayer, resource: Resource): ActionResult {
-  if (game.phase !== "main" || !isCurrent(game, actor)) return err("Not your turn");
+  if ((game.phase !== "main" && game.phase !== "roll") || !isCurrent(game, actor)) return err("Not your turn");
   if (actor.hasPlayedDevThisTurn) return err("Already played a dev card this turn");
   if (playableDevCards(game, actor, "monopoly").length === 0) return err("No playable card");
 
@@ -525,8 +529,8 @@ function handleProposeTrade(
   if (!nonEmpty(giveC) || !nonEmpty(receiveC)) return err("Offer must give and receive something");
   if (!canAfford(actor, giveC)) return err("You don't have those cards");
 
-  const responses: Record<string, "pending" | "accept" | "reject"> = {};
-  for (const p of game.players) if (p.id !== actor.id) responses[p.id] = "pending";
+  const responses: PendingTrade["responses"] = {};
+  for (const p of game.players) if (p.id !== actor.id) responses[p.id] = { status: "pending" };
 
   game.pendingTrade = {
     id: `trade-${Date.now()}`,
@@ -549,7 +553,34 @@ function handleRespondTrade(
   if (!(actor.id in trade.responses)) return err("You can't respond to this trade");
   // To accept, the responder must actually hold what the proposer wants.
   if (accept && !canAfford(actor, trade.receive)) return err("You don't have those cards");
-  trade.responses[actor.id] = accept ? "accept" : "reject";
+  trade.responses[actor.id] = { status: accept ? "accept" : "reject" };
+  return ok;
+}
+
+// A non-active player counters: give/receive are from THEIR perspective (what
+// they give / want). We store the equivalent terms from the proposer's side.
+function handleCounterTrade(
+  game: InternalGame,
+  actor: InternalPlayer,
+  giveInput: Partial<ResourceCount>,
+  receiveInput: Partial<ResourceCount>
+): ActionResult {
+  const trade = game.pendingTrade;
+  if (!trade) return err("No active trade");
+  if (actor.id === trade.proposer) return err("You proposed this trade");
+  if (!(actor.id in trade.responses)) return err("You can't respond to this trade");
+
+  const myGive = cleanCount(giveInput); // what the counter-offerer gives
+  const myReceive = cleanCount(receiveInput); // what they want
+  if (!nonEmpty(myGive) || !nonEmpty(myReceive)) return err("Counter must give and receive something");
+  if (!canAfford(actor, myGive)) return err("You don't have those cards");
+
+  trade.responses[actor.id] = {
+    status: "counter",
+    give: myReceive, // proposer would give what the counter-offerer wants
+    receive: myGive, // proposer would get what the counter-offerer gives
+  };
+  addLog(game, `${actor.name} countered the trade.`, actor.id);
   return ok;
 }
 
@@ -561,19 +592,26 @@ function handleAcceptTradeWith(
   const trade = game.pendingTrade;
   if (!trade) return err("No active trade");
   if (trade.proposer !== actor.id) return err("Only the proposer can confirm");
-  if (trade.responses[partnerId] !== "accept") return err("That player hasn't accepted");
+  const response = trade.responses[partnerId];
+  if (!response || (response.status !== "accept" && response.status !== "counter")) {
+    return err("That player hasn't offered a trade");
+  }
+
+  // Effective terms (proposer's perspective): original offer, or the counter.
+  const give = response.status === "counter" ? response.give! : trade.give;
+  const receive = response.status === "counter" ? response.receive! : trade.receive;
 
   const partner = playerById(game, partnerId);
   if (!partner) return err("Unknown player");
-  if (!canAfford(actor, trade.give)) return err("You no longer have those cards");
-  if (!canAfford(partner, trade.receive)) return err("They no longer have those cards");
+  if (!canAfford(actor, give)) return err("You no longer have those cards");
+  if (!canAfford(partner, receive)) return err("They no longer have those cards");
 
   // proposer gives `give`, receives `receive`; partner does the inverse.
   for (const r of RESOURCES) {
-    actor.resources[r] -= trade.give[r];
-    partner.resources[r] += trade.give[r];
-    partner.resources[r] -= trade.receive[r];
-    actor.resources[r] += trade.receive[r];
+    actor.resources[r] -= give[r];
+    partner.resources[r] += give[r];
+    partner.resources[r] -= receive[r];
+    actor.resources[r] += receive[r];
   }
   addLog(game, `${actor.name} traded with ${partner.name}.`, actor.id);
   game.pendingTrade = null;

@@ -151,13 +151,21 @@ export interface SetupProgress {
   lastSettlement: string | null; // vertex just placed, road must connect
 }
 
+// A responder's answer to an offer: accept the original terms, reject, or
+// counter with their own terms (stored from the proposer's perspective).
+export interface TradeResponse {
+  status: "pending" | "accept" | "reject" | "counter";
+  give?: ResourceCount; // counter: what the proposer would give
+  receive?: ResourceCount; // counter: what the proposer would get
+}
+
 export interface PendingTrade {
   id: string;
   proposer: string;
   give: ResourceCount; // proposer gives
   receive: ResourceCount; // proposer wants
   // playerId -> response
-  responses: Record<string, "pending" | "accept" | "reject">;
+  responses: Record<string, TradeResponse>;
 }
 
 export interface LogEntry {
@@ -233,6 +241,9 @@ export type Action =
       receive: Partial<ResourceCount>;
     }
   | { type: "respondTrade"; accept: boolean }
+  // A non-active player counters the active player's offer with their own terms
+  // (give/receive from the responder's own perspective).
+  | { type: "counterTrade"; give: Partial<ResourceCount>; receive: Partial<ResourceCount> }
   | { type: "acceptTradeWith"; playerId: string }
   | { type: "cancelTrade" }
   | { type: "endTurn" };

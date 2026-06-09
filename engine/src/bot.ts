@@ -128,7 +128,7 @@ export function computeBotStep(
   if (game.pendingTrade) {
     const trade = game.pendingTrade;
     for (const p of game.players) {
-      if (p.isBot && trade.responses[p.id] === "pending") {
+      if (p.isBot && trade.responses[p.id]?.status === "pending") {
         const accept = botEvaluatesTrade(game, p, trade.give, trade.receive);
         return { playerId: p.id, action: { type: "respondTrade", accept } };
       }
