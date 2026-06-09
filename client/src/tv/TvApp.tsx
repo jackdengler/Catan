@@ -31,10 +31,40 @@ export function TvApp() {
   // Keep the screen awake — this tab is usually a phone being mirrored to a TV.
   useKeepAwake();
 
-  if (!game || game.phase === "lobby") {
-    return <Lobby code={code} lobby={lobby} />;
-  }
-  return <TvGame code={code} game={game} />;
+  // The board view fills the screen with no page scrolling (everything is sized
+  // to fit), so it mirrors cleanly to a TV.
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <>
+      <FullscreenButton />
+      {!game || game.phase === "lobby" ? <Lobby code={code} lobby={lobby} /> : <TvGame code={code} game={game} />}
+    </>
+  );
+}
+
+// Toggle the browser into/out of fullscreen for distraction-free mirroring.
+function FullscreenButton() {
+  const [fs, setFs] = useState(false);
+  useEffect(() => {
+    const onChange = () => setFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggle = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.().catch(() => {});
+  };
+  return (
+    <button className="fullscreen-btn" onClick={toggle} title="Fullscreen">
+      {fs ? "🗗 Exit fullscreen" : "⛶ Fullscreen"}
+    </button>
+  );
 }
 
 // Hold a screen wake lock (re-acquired when the tab becomes visible again).
