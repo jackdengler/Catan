@@ -279,29 +279,46 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         const v = vById.get(vid)!;
         const c = colorOf(b.owner);
         const cls = isNew(vid) ? "piece-new" : undefined;
+        const fill = PLAYER_FILL[c];
+        const line = PLAYER_STROKE[c];
         if (b.type === "city") {
+          // A larger building: a flat-topped tower beside a pitched-roof house —
+          // the classic Catan city silhouette.
+          const x = v.x, y = v.y;
           return (
             <g key={vid} className={cls} pointerEvents="none" filter="url(#pieceShadow)">
-              <rect
-                x={v.x - 11}
-                y={v.y - 11}
-                width={22}
-                height={22}
-                rx={5}
-                fill={PLAYER_FILL[c]}
-                stroke={PLAYER_STROKE[c]}
-                strokeWidth={2}
+              <path
+                d={`M ${x - 10} ${y + 9} L ${x - 10} ${y - 9} L ${x - 3} ${y - 9}
+                    L ${x - 3} ${y - 4} L ${x + 3.5} ${y - 11} L ${x + 10} ${y - 4}
+                    L ${x + 10} ${y + 9} Z`}
+                fill={fill}
+                stroke={line}
+                strokeWidth={1.6}
+                strokeLinejoin="round"
               />
-              {/* a soft top highlight for a glossy piece */}
-              <rect x={v.x - 8} y={v.y - 8} width={16} height={6} rx={3} fill="#fff" opacity={0.18} />
-              <circle cx={v.x} cy={v.y + 1} r={4} fill={PLAYER_STROKE[c]} />
+              {/* tower-top + roof highlight */}
+              <polygon points={`${x + 3.5},${y - 11} ${x + 10},${y - 4} ${x - 3},${y - 4}`} fill="#fff" opacity={0.16} />
+              {/* windows + door */}
+              <rect x={x - 8} y={y - 5} width={3} height={3} fill={line} opacity={0.7} />
+              <rect x={x - 8} y={y + 1} width={3} height={3} fill={line} opacity={0.7} />
+              <rect x={x + 3} y={y + 3} width={4} height={6} fill={line} opacity={0.75} />
             </g>
           );
         }
+        // Settlement: a small house (pentagon).
+        const x = v.x, y = v.y;
         return (
           <g key={vid} className={cls} pointerEvents="none" filter="url(#pieceShadow)">
-            <circle cx={v.x} cy={v.y} r={9.5} fill={PLAYER_FILL[c]} stroke={PLAYER_STROKE[c]} strokeWidth={2} />
-            <circle cx={v.x - 2.6} cy={v.y - 2.6} r={2.6} fill="#fff" opacity={0.28} />
+            <polygon
+              points={`${x},${y - 9} ${x + 8},${y - 2} ${x + 8},${y + 8} ${x - 8},${y + 8} ${x - 8},${y - 2}`}
+              fill={fill}
+              stroke={line}
+              strokeWidth={1.6}
+              strokeLinejoin="round"
+            />
+            {/* roof highlight + door */}
+            <polygon points={`${x},${y - 9} ${x + 8},${y - 2} ${x - 8},${y - 2}`} fill="#fff" opacity={0.2} />
+            <rect x={x - 2} y={y + 2} width={4} height={6} fill={line} opacity={0.7} />
           </g>
         );
       })}
