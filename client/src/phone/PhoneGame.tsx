@@ -50,10 +50,17 @@ export function PhoneGame({ game, me, myId }: Props) {
   // Haptic + sound cues for moments that need attention on a pocketed phone.
   useFeedback(game, myId, myTurn);
 
-  // Track which swipe page is showing (for the dots indicator).
-  const [page, setPage] = useState(0);
+  // Swipe pages: Log (left) · Board (middle) · Costs (right). Opens on Board.
+  const [page, setPage] = useState(1);
   const [endSeen, setEndSeen] = useState(false);
-  const PAGES = ["Play", "Board", "Costs", "Log"];
+  const PAGES = ["Log", "Board", "Costs"];
+  const initScroll = useRef(false);
+  const swipeRef = (el: HTMLDivElement | null) => {
+    if (el && !initScroll.current) {
+      initScroll.current = true;
+      el.scrollLeft = el.clientWidth; // start centered on the Board tab
+    }
+  };
   const winner = game.winner ? game.players.find((p) => p.id === game.winner) : null;
 
   // Reset transient UI when the turn or phase changes.
@@ -249,28 +256,32 @@ export function PhoneGame({ game, me, myId }: Props) {
       <EventBanner log={game.log} />
       <div
         className="swipe"
+        ref={swipeRef}
         onScroll={(e) =>
           setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))
         }
       >
-        <section className="swipe-page">
-          <PlayPanel
-            game={game}
-            me={me}
-            myId={myId}
-            current={current}
-            myTurn={myTurn}
-            setSelecting={setSelecting}
-            setShowDev={setShowDev}
-            setShowTrade={setShowTrade}
-          />
+        {/* Left: your hand, scores, and the game log. */}
+        <section className="swipe-page info-tab">
+          <Hand game={game} me={me} myId={myId} />
+          <MiniScores game={game} myId={myId} />
+          <div className="phone-log-head">Game log</div>
+          <div className="log phone-log">
+            {[...game.log].reverse().map((l) => (
+              <div key={l.id} className={`log-line ${l.major ? "major" : ""}`}>
+                {l.text}
+              </div>
+            ))}
+          </div>
         </section>
+        {/* Middle: the board and all turn actions. */}
         <section className="swipe-page board-page">
           <div className="phone-board-view">
             <Board state={game} animate />
           </div>
           <div className="board-actions">
             <MiniHand me={me} />
+            {mePublic && <PiecesLeft p={mePublic} />}
             <TurnTimer endsAt={game.turnEndsAt} />
           </div>
           <TradePanels game={game} me={me} myId={myId} />
@@ -284,18 +295,9 @@ export function PhoneGame({ game, me, myId }: Props) {
           />
           {!myTurn && <LastActivity log={game.log} />}
         </section>
+        {/* Right: build-cost reference. */}
         <section className="swipe-page costs-page">
           <BuildCosts />
-        </section>
-        <section className="swipe-page log-page">
-          <div className="phone-log-head">Game log</div>
-          <div className="log phone-log">
-            {[...game.log].reverse().map((l) => (
-              <div key={l.id} className={`log-line ${l.major ? "major" : ""}`}>
-                {l.text}
-              </div>
-            ))}
-          </div>
         </section>
       </div>
       <div className="swipe-dots">
@@ -341,66 +343,19 @@ function LastActivity({ log }: { log: LogEntry[] }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Play panel (hand + status + actions) — page 1 of the swipe view
-// ---------------------------------------------------------------------------
-
-function PlayPanel({
-  game,
-  me,
-  myId,
-  current,
-  myTurn,
-  setSelecting,
-  setShowDev,
-  setShowTrade,
-}: {
-  game: GameStatePublic;
-  me: PrivateState | null;
-  myId: string;
-  current: GameStatePublic["players"][number];
-  myTurn: boolean;
-  setSelecting: (s: Selecting) => void;
-  setShowDev: (b: boolean) => void;
-  setShowTrade: (b: boolean) => void;
-}) {
+// Pieces a player has left to build — settlements, cities, roads.
+function PiecesLeft({ p }: { p: GameStatePublic["players"][number] }) {
   return (
-    <div className="phone-game">
-      <Hand game={game} me={me} myId={myId} />
-
-      <div className="status-line">
-        {myTurn ? <strong>Your turn</strong> : <span>{current.name}'s turn</span>}
-        <TurnTimer endsAt={game.turnEndsAt} />
-        {game.dice && (
-          <span className="dice-mini">
-            🎲 {game.dice[0]}+{game.dice[1]} = {game.dice[0] + game.dice[1]}
-          </span>
-        )}
-      </div>
-
-      {/* Trade negotiation panel (proposer's status view) */}
-      <TradePanels game={game} me={me} myId={myId} />
-
-      <TurnActions
-        game={game}
-        me={me}
-        myTurn={myTurn}
-        setSelecting={setSelecting}
-        setShowDev={setShowDev}
-        setShowTrade={setShowTrade}
-      />
-
-      {!myTurn && game.phase !== "moveRobber" && (
-        <p className="muted center">Waiting for {current.name}…</p>
-      )}
-
-      <MiniScores game={game} myId={myId} />
+    <div className="pieces-left" title="Pieces left to build">
+      <span>🏠 {p.settlementsLeft}</span>
+      <span>🏙️ {p.citiesLeft}</span>
+      <span>🛣️ {p.roadsLeft}</span>
     </div>
   );
 }
 
 // The turn's action controls (roll, or the full build/trade/dev/end grid).
-// Shared by the Play panel and the Board page so you can play from either.
+// Used on the Board page so you can play right from the map.
 function TurnActions({
   game,
   me,
@@ -492,6 +447,12 @@ function Hand({ game, me, myId }: { game: GameStatePublic; me: PrivateState | nu
               {devLabel(type)} ×{count}
             </span>
           ))}
+        </div>
+      )}
+      {mePublic && (
+        <div className="hand-pieces">
+          <span className="hp-label">Pieces left</span>
+          <PiecesLeft p={mePublic} />
         </div>
       )}
     </div>

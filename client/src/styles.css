@@ -1878,3 +1878,28 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 }
 .score-name { display: flex; align-items: center; gap: 6px; }
 .me-id { display: flex; align-items: center; gap: 8px; }
+
+/* Log/info tab (left): hand + scores + log, with the log as the scroll region */
+.info-tab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  padding-top: 2px;
+}
+.info-tab .mini-scores { max-height: 34vh; overflow-y: auto; touch-action: pan-y; }
+.info-tab .phone-log { flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; }
+
+/* Pieces remaining to build */
+.pieces-left { display: flex; gap: 10px; font-weight: 700; font-size: 0.9rem; }
+.hand-pieces {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-edge);
+}
+.hp-label { color: var(--muted); font-size: 0.8rem; }
+.board-actions .pieces-left { font-size: 0.82rem; gap: 8px; }
