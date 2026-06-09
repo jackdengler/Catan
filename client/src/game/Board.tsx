@@ -210,24 +210,35 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         );
       })}
 
-      {/* Selectable edges */}
+      {/* Selectable edges — an oversized transparent hit line makes roads easy
+          to tap on a phone; the coloured line on top is the visible target. */}
       {selectable === "edge" &&
         board.edges
           .filter((e) => hl.has(e.id))
           .map((e) => (
-            <line
-              key={`hl-${e.id}`}
-              x1={e.x1}
-              y1={e.y1}
-              x2={e.x2}
-              y2={e.y2}
-              stroke="#ffe14d"
-              strokeWidth={10}
-              strokeLinecap="round"
-              opacity={0.85}
-              className="selectable"
-              onClick={() => onSelect?.(e.id)}
-            />
+            <g key={`hl-${e.id}`} className="selectable" onClick={() => onSelect?.(e.id)}>
+              <line
+                x1={e.x1}
+                y1={e.y1}
+                x2={e.x2}
+                y2={e.y2}
+                stroke="transparent"
+                strokeWidth={28}
+                strokeLinecap="round"
+              />
+              <line
+                x1={e.x1}
+                y1={e.y1}
+                x2={e.x2}
+                y2={e.y2}
+                stroke="#ffe14d"
+                strokeWidth={11}
+                strokeLinecap="round"
+                opacity={0.9}
+                className="pulse"
+                pointerEvents="none"
+              />
+            </g>
           ))}
 
       {/* Buildings */}
@@ -259,22 +270,25 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         );
       })}
 
-      {/* Selectable vertices */}
+      {/* Selectable vertices — large transparent hit circle + a smaller visible
+          marker, so settlements/cities are easy to place by thumb. */}
       {selectable === "vertex" &&
         board.vertices
           .filter((v) => hl.has(v.id))
           .map((v) => (
-            <circle
-              key={`hlv-${v.id}`}
-              cx={v.x}
-              cy={v.y}
-              r={11}
-              fill="rgba(255,225,77,0.5)"
-              stroke="#ffe14d"
-              strokeWidth={3}
-              className="selectable pulse"
-              onClick={() => onSelect?.(v.id)}
-            />
+            <g key={`hlv-${v.id}`} className="selectable" onClick={() => onSelect?.(v.id)}>
+              <circle cx={v.x} cy={v.y} r={24} fill="transparent" />
+              <circle
+                cx={v.x}
+                cy={v.y}
+                r={13}
+                fill="rgba(255,225,77,0.5)"
+                stroke="#ffe14d"
+                strokeWidth={3}
+                className="pulse"
+                pointerEvents="none"
+              />
+            </g>
           ))}
     </svg>
   );

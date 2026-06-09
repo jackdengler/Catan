@@ -1389,3 +1389,7 @@ button.ghost.small,
   color: var(--muted);
   padding-left: 30px;
 }
+
+/* Snappier, more forgiving taps on the interactive phone board. */
+.board-svg { touch-action: manipulation; }
+.board-svg .selectable { cursor: pointer; }
