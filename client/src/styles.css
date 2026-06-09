@@ -1903,3 +1903,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 }
 .hp-label { color: var(--muted); font-size: 0.8rem; }
 .board-actions .pieces-left { font-size: 0.82rem; gap: 8px; }
+
+/* Team logo image (rounded crest) */
+.team-logo {
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: var(--shadow-1);
+  background: rgba(255, 255, 255, 0.08);
+}
