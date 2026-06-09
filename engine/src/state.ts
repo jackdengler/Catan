@@ -23,7 +23,7 @@ import {
   type StatePayload,
   type Vertex,
 } from "@catan/shared";
-import { generateBoard } from "./board.js";
+import { generateBoard, type GeneratedBoard } from "./board.js";
 
 export interface InternalPlayer {
   id: string;
@@ -92,11 +92,12 @@ export function createGame(
     connected: boolean;
     isBot?: boolean;
   }[],
-  optionsInput?: Partial<GameOptions>
+  optionsInput?: Partial<GameOptions>,
+  board?: GeneratedBoard
 ): InternalGame {
   const options: GameOptions = { ...DEFAULT_OPTIONS, ...optionsInput };
   if (options.randomizeOrder) lobbyPlayers = shuffle(lobbyPlayers);
-  const { layout, robberHex } = generateBoard();
+  const { layout, robberHex } = board ?? generateBoard();
 
   const hexById = new Map(layout.hexes.map((h) => [h.id, h]));
   const vertexById = new Map(layout.vertices.map((v) => [v.id, v]));

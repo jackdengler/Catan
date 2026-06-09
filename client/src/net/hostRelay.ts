@@ -16,11 +16,18 @@ export class HostRelay {
   private conns = new Map<RelayConn, string>(); // conn -> playerId
   private botTimer: ReturnType<typeof setTimeout> | null = null;
   private turnTimer: ReturnType<typeof setTimeout> | null = null;
+  private tradeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     public readonly host: GameHost,
     private onLocal: (lobby: LobbyState, payload: StatePayload | null) => void
   ) {}
+
+  // Reroll the lobby board preview.
+  regenerateBoard(): void {
+    this.host.regenerateBoard();
+    this.broadcast();
+  }
 
   // Lobby controls available to the board tab.
   addBot(): { ok: boolean; message?: string } {
@@ -95,6 +102,21 @@ export class HostRelay {
     this.onLocal(lobby, this.host.payloadFor(null));
     this.scheduleBots();
     this.scheduleTurnTimeout();
+    this.scheduleTradeTimeout();
+  }
+
+  // Auto-cancel a domestic trade offer that nobody resolves in time.
+  private scheduleTradeTimeout(): void {
+    if (this.tradeTimer) {
+      clearTimeout(this.tradeTimer);
+      this.tradeTimer = null;
+    }
+    const deadline = this.host.tradeDeadline;
+    if (deadline == null) return;
+    this.tradeTimer = setTimeout(() => {
+      this.tradeTimer = null;
+      if (this.host.expireTradeIfDue()) this.broadcast();
+    }, Math.max(0, deadline - Date.now()) + 50);
   }
 
   // Enforce the optional turn timer: when it expires, auto-roll/auto-end.

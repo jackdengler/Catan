@@ -37,6 +37,10 @@ export interface ActionResult {
   message?: string;
 }
 
+// A domestic trade offer auto-cancels if nobody resolves it within this window,
+// so a forgotten offer never lingers on everyone's screen.
+const TRADE_TTL_MS = 60_000;
+
 const ok: ActionResult = { ok: true };
 const err = (message: string): ActionResult => ({ ok: false, message });
 
@@ -49,6 +53,11 @@ export function applyAction(
   if (!actor) return err("Unknown player");
   if (game.phase === "ended") return err("The game is over");
 
+  // Drop a stale trade offer before handling anything else.
+  if (game.pendingTrade && Date.now() >= game.pendingTrade.expiresAt) {
+    game.pendingTrade = null;
+  }
+
   switch (action.type) {
     case "rollDice":
       return handleRoll(game, actor);
@@ -56,6 +65,8 @@ export function applyAction(
       return handleSetupSettlement(game, actor, action.vertexId);
     case "placeRoad":
       return handlePlaceRoad(game, actor, action.edgeId);
+    case "undoSetup":
+      return handleUndoSetup(game, actor);
     case "buildSettlement":
       return handleBuildSettlement(game, actor, action.vertexId);
     case "buildCity":
@@ -148,6 +159,36 @@ function handleSetupSettlement(
 
   game.setup.needs = "road";
   game.setup.lastSettlement = vertexId;
+  return ok;
+}
+
+// Take back the settlement just placed during setup (before its road is laid),
+// in case the player misclicked. Refunds the piece and any starting resources.
+function handleUndoSetup(game: InternalGame, actor: InternalPlayer): ActionResult {
+  if (game.phase !== "setup" || !game.setup) return err("Not in setup");
+  if (game.setup.order[game.setup.pointer] !== actor.id) return err("Not your turn");
+  if (game.setup.needs !== "road" || !game.setup.lastSettlement) {
+    return err("Nothing to undo");
+  }
+
+  const vertexId = game.setup.lastSettlement;
+  delete game.buildings[vertexId];
+  actor.settlementsLeft += 1;
+
+  // Round-2 settlements grant starting resources — claw those back to the bank.
+  if (game.setup.round === 2) {
+    const vertex = game.vertexById.get(vertexId)!;
+    const refund: ResourceCount = EMPTY_RESOURCES();
+    for (const hexId of vertex.hexes) {
+      const hex = game.hexById.get(hexId)!;
+      if (hex.terrain !== "desert") refund[hex.terrain as Resource] += 1;
+    }
+    pay(game, actor, refund);
+  }
+
+  game.setup.needs = "settlement";
+  game.setup.lastSettlement = null;
+  addLog(game, `${actor.name} took back their settlement.`, actor.id);
   return ok;
 }
 
@@ -538,6 +579,7 @@ function handleProposeTrade(
     give: giveC,
     receive: receiveC,
     responses,
+    expiresAt: Date.now() + TRADE_TTL_MS,
   };
   addLog(game, `${actor.name} proposed a trade.`, actor.id);
   return ok;

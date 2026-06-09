@@ -166,6 +166,7 @@ export interface PendingTrade {
   receive: ResourceCount; // proposer wants
   // playerId -> response
   responses: Record<string, TradeResponse>;
+  expiresAt: number; // epoch ms: a stale offer auto-cancels after this
 }
 
 export interface LogEntry {
@@ -224,6 +225,7 @@ export type Action =
   | { type: "rollDice" }
   | { type: "placeSettlement"; vertexId: string } // setup
   | { type: "placeRoad"; edgeId: string } // setup & road-building card
+  | { type: "undoSetup" } // take back the settlement just placed during setup
   | { type: "buildSettlement"; vertexId: string }
   | { type: "buildCity"; vertexId: string }
   | { type: "buildRoad"; edgeId: string }
@@ -265,6 +267,10 @@ export interface LobbyState {
   roomCode: string;
   players: LobbyPlayer[];
   started: boolean;
+  // A preview of the board to be played, so the host can regenerate it in the
+  // lobby if they don't like the layout. Absent on the optional Node server.
+  boardPreview?: BoardLayout;
+  robberPreview?: string;
 }
 
 export interface ServerToClientEvents {

@@ -337,6 +337,69 @@ describe("trade counteroffers", () => {
   });
 });
 
+describe("setup undo", () => {
+  it("takes back the just-placed settlement and refunds round-2 resources", () => {
+    const game = newGame();
+    // Fast-forward to round 2 so a settlement grants starting resources.
+    const place = (pid: string) => {
+      const v = game.board.vertices.find(
+        (x) => !game.buildings[x.id] && !x.adjacent.some((a) => game.buildings[a])
+      )!;
+      applyAction(game, pid, { type: "placeSettlement", vertexId: v.id });
+      const e = game.vertexById.get(v.id)!.edges.find((eid) => !game.roads[eid])!;
+      applyAction(game, pid, { type: "placeRoad", edgeId: e });
+    };
+    place("p1");
+    place("p2");
+    // Round 2 now, reverse order -> p2 first.
+    expect(game.setup!.round).toBe(2);
+    const p2 = game.players.find((p) => p.id === "p2")!;
+    const before = { ...p2.resources };
+    const v = game.board.vertices.find(
+      (x) => !game.buildings[x.id] && !x.adjacent.some((a) => game.buildings[a])
+    )!;
+    expect(applyAction(game, "p2", { type: "placeSettlement", vertexId: v.id }).ok).toBe(true);
+    expect(game.setup!.needs).toBe("road");
+    expect(applyAction(game, "p2", { type: "undoSetup" }).ok).toBe(true);
+    // Settlement removed, piece returned, resources clawed back.
+    expect(game.buildings[v.id]).toBeUndefined();
+    expect(game.setup!.needs).toBe("settlement");
+    expect(p2.settlementsLeft).toBe(4); // one already placed in round 1
+    for (const r of ["wood", "brick", "sheep", "wheat", "ore"] as const) {
+      expect(p2.resources[r]).toBe(before[r]);
+    }
+  });
+
+  it("refuses to undo once the road is placed", () => {
+    const game = newGame();
+    const v = game.board.vertices.find(
+      (x) => !game.buildings[x.id] && !x.adjacent.some((a) => game.buildings[a])
+    )!;
+    applyAction(game, "p1", { type: "placeSettlement", vertexId: v.id });
+    const e = game.vertexById.get(v.id)!.edges.find((eid) => !game.roads[eid])!;
+    applyAction(game, "p1", { type: "placeRoad", edgeId: e });
+    // It's p2's turn now; p1 cannot undo a finished placement.
+    expect(applyAction(game, "p1", { type: "undoSetup" }).ok).toBe(false);
+  });
+});
+
+describe("trade expiry", () => {
+  it("auto-cancels a stale offer on the next action", () => {
+    const game = newGame();
+    game.phase = "main";
+    game.hasRolled = true;
+    game.currentPlayerIndex = 0;
+    const p1 = game.players[0];
+    p1.resources = { wood: 2, brick: 0, sheep: 0, wheat: 0, ore: 0 };
+    applyAction(game, "p1", { type: "proposeTrade", give: { wood: 1 }, receive: { sheep: 1 } });
+    expect(game.pendingTrade).not.toBeNull();
+    // Make the offer stale, then take any action -> it should be cleared.
+    game.pendingTrade!.expiresAt = Date.now() - 1;
+    applyAction(game, "p2", { type: "respondTrade", accept: false });
+    expect(game.pendingTrade).toBeNull();
+  });
+});
+
 describe("win detection", () => {
   it("ends the game when a player reaches 10 victory points", () => {
     const game = newGame();

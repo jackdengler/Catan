@@ -138,6 +138,19 @@ export class HostTransport extends Transport {
     this.relay?.start();
   }
 
+  regenerateBoard(): void {
+    this.relay?.regenerateBoard();
+  }
+
+  // Snapshot the live game to JSON for migrating the host to another device.
+  exportState(): string | null {
+    if (!this.relay) return null;
+    const snapshot = this.relay.host.serialize();
+    if (!snapshot.game) return null;
+    saveHostState({ mode: this.mode, localPlayerId: this.localPlayerId, host: snapshot });
+    return JSON.stringify({ mode: this.mode, localPlayerId: this.localPlayerId, host: snapshot });
+  }
+
   setOptions(options: Partial<import("@catan/shared").GameOptions>): void {
     this.relay?.host.setOptions(options);
   }

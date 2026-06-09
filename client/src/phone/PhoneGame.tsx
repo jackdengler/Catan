@@ -20,6 +20,7 @@ import {
   legalRobberHexes,
   legalSettlements,
 } from "../game/legal.js";
+import { cueDiscard, cueSeven, cueTrade, cueYourTurn } from "../game/feedback.js";
 import { DiscardPanel } from "./panels/DiscardPanel.js";
 import { TradePanels } from "./panels/TradePanels.js";
 import { DevMenu } from "./panels/DevMenu.js";
@@ -44,6 +45,9 @@ export function PhoneGame({ game, me, myId }: Props) {
 
   // Animate the resources this player gains on each dice roll.
   const rollGain = useRollGain(game, me);
+
+  // Haptic + sound cues for moments that need attention on a pocketed phone.
+  useFeedback(game, myId, myTurn);
 
   // Track which swipe page is showing (for the dots indicator).
   const [page, setPage] = useState(0);
@@ -217,6 +221,11 @@ export function PhoneGame({ game, me, myId }: Props) {
           />
         </div>
         {placement.highlight.size === 0 && <p className="muted">No legal spots available.</p>}
+        {game.phase === "setup" && game.setup?.needs === "road" && myTurn && (
+          <button className="link" onClick={() => sendAction({ type: "undoSetup" })}>
+            ← Undo settlement
+          </button>
+        )}
         {placement.cancelable && (
           <button className="link" onClick={() => setSelecting(null)}>
             Cancel
@@ -481,6 +490,19 @@ function MiniScores({ game, myId }: { game: GameStatePublic; myId: string }) {
 // Trade builder (propose)
 // ---------------------------------------------------------------------------
 
+// Best ratio (4/3/2) this player can trade a given resource at, from the ports
+// their settlements/cities touch. Mirrors the engine's bestTradeRatio.
+function portRatio(game: GameStatePublic, myId: string, giveRes: Resource): number {
+  let ratio = 4;
+  for (const port of game.board.ports) {
+    const owns = port.vertices.some((v) => game.buildings[v]?.owner === myId);
+    if (!owns) continue;
+    if (port.type === "any") ratio = Math.min(ratio, 3);
+    else if (port.type === giveRes) ratio = Math.min(ratio, 2);
+  }
+  return ratio;
+}
+
 function TradeBuilder({
   game,
   me,
@@ -490,47 +512,111 @@ function TradeBuilder({
   me: PrivateState;
   onClose: () => void;
 }) {
+  const myId = me.playerId;
+  const [tab, setTab] = useState<"bank" | "players">("bank");
   const [give, setGive] = useState<Record<Resource, number>>(zero());
   const [receive, setReceive] = useState<Record<Resource, number>>(zero());
+  const [bankGive, setBankGive] = useState<Resource | null>(null);
 
   const adjustGive = (r: Resource, d: number) =>
     setGive((s) => ({ ...s, [r]: Math.max(0, Math.min(me.resources[r], s[r] + d)) }));
   const adjustReceive = (r: Resource, d: number) =>
     setReceive((s) => ({ ...s, [r]: Math.max(0, Math.min(9, s[r] + d)) }));
 
-  const bankMode = () => {
-    // simple bank trade shortcut: give X of one, receive 1 of one
-    const g = RESOURCES.find((r) => give[r] > 0);
-    const rc = RESOURCES.find((r) => receive[r] > 0);
-    if (g && rc) sendAction({ type: "bankTrade", give: g, receive: rc });
-    onClose();
-  };
+  // The resources this player can actually bank/port trade right now: they must
+  // hold at least the ratio for that resource. Only these are offered.
+  const bankable = RESOURCES.map((r) => ({ r, ratio: portRatio(game, myId, r) })).filter(
+    ({ r, ratio }) => me.resources[r] >= ratio
+  );
+  const proposeValid = RESOURCES.some((r) => give[r] > 0) && RESOURCES.some((r) => receive[r] > 0);
 
   return (
     <div className="modal">
       <div className="modal-card">
-        <h3>Propose a trade</h3>
-        <p className="muted small">You give</p>
-        <ResRow state={give} onAdjust={adjustGive} />
-        <p className="muted small">You receive</p>
-        <ResRow state={receive} onAdjust={adjustReceive} />
-        <div className="modal-actions">
-          <button
-            className="primary"
-            onClick={() => {
-              sendAction({ type: "proposeTrade", give, receive });
-              onClose();
-            }}
-          >
-            Offer to players
+        <h3>Trade</h3>
+        <div className="trade-tabs">
+          <button className={tab === "bank" ? "on" : ""} onClick={() => setTab("bank")}>
+            🏦 Bank / port
           </button>
-          <button className="ghost" onClick={bankMode}>
-            Trade with bank
-          </button>
-          <button className="link" onClick={onClose}>
-            Cancel
+          <button className={tab === "players" ? "on" : ""} onClick={() => setTab("players")}>
+            🤝 Players
           </button>
         </div>
+
+        {tab === "bank" ? (
+          <div className="bank-trade">
+            {bankable.length === 0 ? (
+              <p className="muted small">
+                You don't have enough of any resource to trade with the bank yet (need 4, or 3/2
+                with a port).
+              </p>
+            ) : (
+              <>
+                <p className="muted small">Give</p>
+                <div className="bank-give-row">
+                  {bankable.map(({ r, ratio }) => (
+                    <button
+                      key={r}
+                      className={`bank-give ${bankGive === r ? "on" : ""}`}
+                      onClick={() => setBankGive(r)}
+                    >
+                      <span className="bg-emoji">{RESOURCE_EMOJI[r]}</span>
+                      <span className="bg-ratio">{ratio}:1</span>
+                    </button>
+                  ))}
+                </div>
+                {bankGive && (
+                  <>
+                    <p className="muted small">
+                      Give {portRatio(game, myId, bankGive)} {RESOURCE_EMOJI[bankGive]} → receive
+                    </p>
+                    <div className="bank-receive-row">
+                      {RESOURCES.filter((r) => r !== bankGive).map((r) => (
+                        <button
+                          key={r}
+                          className="bank-receive"
+                          disabled={game.bank[r] < 1}
+                          onClick={() => {
+                            sendAction({ type: "bankTrade", give: bankGive, receive: r });
+                            onClose();
+                          }}
+                        >
+                          {RESOURCE_EMOJI[r]}
+                          {game.bank[r] < 1 && <span className="bg-out">out</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+            <button className="link" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="muted small">You give</p>
+            <ResRow state={give} onAdjust={adjustGive} cap={me.resources} />
+            <p className="muted small">You receive</p>
+            <ResRow state={receive} onAdjust={adjustReceive} />
+            <div className="modal-actions">
+              <button
+                className="primary"
+                disabled={!proposeValid}
+                onClick={() => {
+                  sendAction({ type: "proposeTrade", give, receive });
+                  onClose();
+                }}
+              >
+                Offer to players
+              </button>
+              <button className="link" onClick={onClose}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -539,18 +625,24 @@ function TradeBuilder({
 function ResRow({
   state,
   onAdjust,
+  cap,
 }: {
   state: Record<Resource, number>;
   onAdjust: (r: Resource, d: number) => void;
+  cap?: Record<Resource, number>;
 }) {
   return (
     <div className="res-steppers">
       {RESOURCES.map((r) => (
         <div key={r} className="stepper">
           <span>{RESOURCE_EMOJI[r]}</span>
-          <button onClick={() => onAdjust(r, -1)}>−</button>
+          <button onClick={() => onAdjust(r, -1)} disabled={state[r] <= 0}>
+            −
+          </button>
           <span className="stepper-val">{state[r]}</span>
-          <button onClick={() => onAdjust(r, +1)}>+</button>
+          <button onClick={() => onAdjust(r, +1)} disabled={cap ? state[r] >= cap[r] : false}>
+            +
+          </button>
         </div>
       ))}
     </div>
@@ -587,6 +679,43 @@ function useRollGain(game: GameStatePublic, me: PrivateState | null) {
   }, [game.dice, game.currentPlayerIndex, me]);
 
   return gain;
+}
+
+// Fire haptic/sound cues on the transitions a player shouldn't miss: their turn
+// starting, a 7 being rolled, a discard owed, or a trade offered to them.
+function useFeedback(game: GameStatePublic, myId: string, myTurn: boolean) {
+  const wasMyTurn = useRef(false);
+  const prevDice = useRef<string | null>(null);
+  const owedDiscard = useRef(false);
+  const seenTrade = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Your turn just began (roll phase, freshly active).
+    const startedTurn = myTurn && !wasMyTurn.current && game.phase === "roll";
+    wasMyTurn.current = myTurn;
+    if (startedTurn) cueYourTurn();
+
+    // A 7 was rolled (robber about to move).
+    const diceStr = game.dice ? `${game.dice[0]}-${game.dice[1]}:${game.currentPlayerIndex}` : null;
+    if (diceStr && diceStr !== prevDice.current && game.dice && game.dice[0] + game.dice[1] === 7) {
+      cueSeven();
+    }
+    prevDice.current = diceStr;
+
+    // You now owe a discard.
+    const owe = (game.pendingDiscards[myId] ?? 0) > 0;
+    if (owe && !owedDiscard.current) cueDiscard();
+    owedDiscard.current = owe;
+
+    // A trade is awaiting your response.
+    const t = game.pendingTrade;
+    const forMe = t && t.proposer !== myId && t.responses[myId]?.status === "pending";
+    if (forMe && seenTrade.current !== t.id) {
+      cueTrade();
+      seenTrade.current = t.id;
+    }
+    if (!t) seenTrade.current = null;
+  }, [game, myId, myTurn]);
 }
 
 function RollGainToast({ gain }: { gain: { items: [Resource, number][]; id: number } }) {

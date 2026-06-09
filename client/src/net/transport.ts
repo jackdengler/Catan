@@ -43,4 +43,9 @@ export abstract class Transport {
   removeBot(_id: string): void {}
   startHostGame(): void {}
   setOptions(_options: Partial<import("@catan/shared").GameOptions>): void {}
+  regenerateBoard(): void {}
+  // Serialize the running game (host only) so it can be moved to another device.
+  exportState(): string | null {
+    return null;
+  }
 }

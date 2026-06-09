@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { GameStatePublic, PlayerColor } from "@catan/shared";
+import type { BoardLayout, GameStatePublic, PlayerColor } from "@catan/shared";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI, RESOURCE_FILL, TERRAIN_FILL } from "./theme.js";
+
+// A non-interactive board for the lobby (preview of the layout to be played).
+export function BoardPreview({ board, robberHex }: { board: BoardLayout; robberHex: string }) {
+  const state = {
+    board,
+    robberHex,
+    players: [],
+    roads: {},
+    buildings: {},
+  } as unknown as GameStatePublic;
+  return <Board state={state} />;
+}
 
 interface BoardProps {
   state: GameStatePublic;
@@ -49,6 +61,19 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
     return () => clearTimeout(t);
   }, [state.roads, state.buildings, animate]);
   const isNew = (id: string) => animate && recent.has(id);
+
+  // Briefly highlight the hex the robber just moved to, so spectators catch it.
+  const [robberFlash, setRobberFlash] = useState(false);
+  const prevRobber = useRef(state.robberHex);
+  useEffect(() => {
+    if (!animate) return;
+    if (state.robberHex !== prevRobber.current) {
+      prevRobber.current = state.robberHex;
+      setRobberFlash(true);
+      const t = setTimeout(() => setRobberFlash(false), 1600);
+      return () => clearTimeout(t);
+    }
+  }, [state.robberHex, animate]);
 
   return (
     <svg
@@ -138,6 +163,23 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
           </g>
         );
       })}
+
+      {/* Last-action highlight: flash the hex the robber just landed on. */}
+      {robber && robberFlash && (
+        <polygon
+          points={robber.corners
+            .map((cid) => {
+              const v = vById.get(cid)!;
+              return `${v.x},${v.y}`;
+            })
+            .join(" ")}
+          fill="none"
+          stroke="#ffe14d"
+          strokeWidth={5}
+          className="robber-flash"
+          pointerEvents="none"
+        />
+      )}
 
       {/* Robber */}
       {robber && (

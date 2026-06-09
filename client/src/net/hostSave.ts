@@ -44,3 +44,18 @@ export function clearHostState(): void {
     /* ignore */
   }
 }
+
+// Import a snapshot exported from another device. Writes it to localStorage so
+// the next host load resumes it (reusing the room code, so phones reconnect).
+// Returns the mode to open ("tv" or "host") or null if the data is invalid.
+export function importHostState(json: string): "tv" | "host" | null {
+  try {
+    const data = JSON.parse(json) as Partial<HostSave>;
+    if (!data || (data.mode !== "tv" && data.mode !== "host")) return null;
+    if (!data.host || !data.host.roomCode || !data.host.game) return null;
+    localStorage.setItem(KEY, JSON.stringify({ ...data, ts: Date.now() }));
+    return data.mode;
+  } catch {
+    return null;
+  }
+}

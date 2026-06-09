@@ -9,6 +9,7 @@ import {
 } from "@catan/shared";
 import { applyAction } from "./actions.js";
 import { buildPayload, createGame, type InternalGame } from "./state.js";
+import { generateBoard, type GeneratedBoard } from "./board.js";
 import { computeBotStep } from "./bot.js";
 
 export interface HostPlayer {
@@ -47,6 +48,7 @@ export class GameHost {
   private players: HostPlayer[] = [];
   private game: InternalGame | null = null;
   private pendingOptions: Partial<GameOptions> = {};
+  private preview: GeneratedBoard | null = null;
 
   constructor(roomCode?: string) {
     this.roomCode = roomCode ?? generateRoomCode();
@@ -59,6 +61,17 @@ export class GameHost {
 
   get options(): Partial<GameOptions> {
     return this.pendingOptions;
+  }
+
+  // The board the next game will use, generated lazily so the lobby can show it.
+  private getPreview(): GeneratedBoard {
+    if (!this.preview) this.preview = generateBoard();
+    return this.preview;
+  }
+
+  // Reroll the board layout in the lobby (no effect once the game has started).
+  regenerateBoard(): void {
+    if (!this.game) this.preview = generateBoard();
   }
 
   get started(): boolean {
@@ -168,7 +181,7 @@ export class GameHost {
   forceStart(): { ok: boolean; message?: string } {
     if (this.game) return { ok: false, message: "Already started" };
     if (this.players.length < 2) return { ok: false, message: "Need at least 2 players" };
-    this.game = createGame(this.roomCode, this.players, this.pendingOptions);
+    this.game = createGame(this.roomCode, this.players, this.pendingOptions, this.getPreview());
     return { ok: true };
   }
 
@@ -214,8 +227,23 @@ export class GameHost {
     const host = this.players.find((p) => p.id === playerId);
     if (!host || !host.isHost) return { ok: false, message: "Only the host can start" };
     if (this.players.length < 2) return { ok: false, message: "Need at least 2 players" };
-    this.game = createGame(this.roomCode, this.players, this.pendingOptions);
+    this.game = createGame(this.roomCode, this.players, this.pendingOptions, this.getPreview());
     return { ok: true };
+  }
+
+  // Clear a pending trade once it has gone stale. Returns whether it did.
+  expireTradeIfDue(): boolean {
+    const t = this.game?.pendingTrade;
+    if (t && Date.now() >= t.expiresAt) {
+      this.game!.pendingTrade = null;
+      return true;
+    }
+    return false;
+  }
+
+  // When the current pending trade expires (epoch ms), or null if none.
+  get tradeDeadline(): number | null {
+    return this.game?.pendingTrade?.expiresAt ?? null;
   }
 
   action(playerId: string, action: Action): { ok: boolean; message?: string } {
@@ -225,9 +253,13 @@ export class GameHost {
   }
 
   lobby(): LobbyState {
+    // Show the upcoming board only before the game starts.
+    const preview = this.game ? null : this.getPreview();
     return {
       roomCode: this.roomCode,
       started: this.started,
+      boardPreview: preview?.layout,
+      robberPreview: preview?.robberHex,
       players: this.players.map((p) => ({
         id: p.id,
         name: p.name,

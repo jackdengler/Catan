@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PLAYER_COLORS, type GameStatePublic, type PlayerColor, type PrivateState, type Resource } from "@catan/shared";
 import { socket, sendAction, isHostPlayRole, hasResumableHostGame, clearHostSave } from "../net/socket.js";
+import { importHostState } from "../net/hostSave.js";
 import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
+import { BoardPreview } from "../game/Board.js";
+import { soundEnabled, setSoundEnabled } from "../game/feedback.js";
 import { HouseRules } from "../game/HouseRules.js";
 import { PLAYER_FILL } from "../game/theme.js";
 
@@ -112,6 +115,8 @@ export function PhoneApp() {
       {!connected && !hostMode && <ReconnectBanner />}
       <div className="phone-topbar">
         <span className="room-tag">Room {joined.roomCode}</span>
+        <SoundToggle />
+        {hostMode && game && game.phase !== "lobby" && <SaveButton />}
         <button className="leave-btn" onClick={leave}>
           Leave
         </button>
@@ -122,6 +127,47 @@ export function PhoneApp() {
         <PhoneGame game={game} me={me} myId={joined.playerId} />
       )}
     </div>
+  );
+}
+
+// Mute/unmute the sound cues (vibration always stays on where supported).
+function SoundToggle() {
+  const [on, setOn] = useState(soundEnabled());
+  return (
+    <button
+      className="sound-btn"
+      title={on ? "Mute sounds" : "Unmute sounds"}
+      onClick={() => {
+        const next = !on;
+        setSoundEnabled(next);
+        setOn(next);
+      }}
+    >
+      {on ? "🔊" : "🔇"}
+    </button>
+  );
+}
+
+// Save the running host game to a file (host phone can migrate to another device).
+function SaveButton() {
+  const [saved, setSaved] = useState(false);
+  const save = () => {
+    const data = socket.exportState();
+    if (!data) return;
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `catan-game-${Date.now()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  return (
+    <button className="save-btn" onClick={save} title="Save game to a file">
+      {saved ? "✓" : "💾"}
+    </button>
   );
 }
 
@@ -174,7 +220,39 @@ function HostSetup({ onCreated }: { onCreated: (roomCode: string, playerId: stri
         {busy ? "Creating…" : "Create game"}
       </button>
       <p className="muted">Next: add computer players and/or share the room code, then start.</p>
+      <ResumeFromFile />
     </div>
+  );
+}
+
+// Resume a game exported from another device (host migration).
+function ResumeFromFile() {
+  const ref = useRef<HTMLInputElement>(null);
+  const [err, setErr] = useState(false);
+  return (
+    <>
+      <button className="link" onClick={() => ref.current?.click()}>
+        📂 Resume a saved game
+      </button>
+      <input
+        ref={ref}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          f.text().then((text) => {
+            if (importHostState(text)) window.location.reload();
+            else {
+              setErr(true);
+              setTimeout(() => setErr(false), 3000);
+            }
+          });
+        }}
+      />
+      {err && <p className="muted small">Couldn't read that save file.</p>}
+    </>
   );
 }
 
@@ -235,6 +313,17 @@ function PhoneLobby({
           </div>
         ))}
       </div>
+
+      {hostControls && lobby?.boardPreview && lobby.robberPreview && (
+        <div className="board-preview">
+          <div className="board-preview-board">
+            <BoardPreview board={lobby.boardPreview} robberHex={lobby.robberPreview} />
+          </div>
+          <button className="ghost" onClick={() => socket.regenerateBoard()}>
+            🔄 Regenerate board
+          </button>
+        </div>
+      )}
 
       {hostControls && <HouseRules />}
       {hostControls && (
