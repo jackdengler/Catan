@@ -274,26 +274,33 @@ export function PhoneGame({ game, me, myId }: Props) {
             ))}
           </div>
         </section>
-        {/* Middle: the board and all turn actions. */}
+        {/* Middle: the board fills the space; the console is pinned at the bottom. */}
         <section className="swipe-page board-page">
           <div className="phone-board-view">
             <Board state={game} animate />
           </div>
-          <div className="board-actions">
-            <MiniHand me={me} />
-            {mePublic && <PiecesLeft p={mePublic} />}
-            <TurnTimer endsAt={game.turnEndsAt} />
+          <div className="board-console">
+            <div className="board-hud">
+              <MiniHand me={me} />
+              <div className="board-hud-right">
+                {mePublic && <PiecesLeft p={mePublic} />}
+                <TurnTimer endsAt={game.turnEndsAt} />
+              </div>
+            </div>
+            <TradePanels game={game} me={me} myId={myId} />
+            {myTurn ? (
+              <TurnActions
+                game={game}
+                me={me}
+                myTurn={myTurn}
+                setSelecting={setSelecting}
+                setShowDev={setShowDev}
+                setShowTrade={setShowTrade}
+              />
+            ) : (
+              <LastActivity log={game.log} />
+            )}
           </div>
-          <TradePanels game={game} me={me} myId={myId} />
-          <TurnActions
-            game={game}
-            me={me}
-            myTurn={myTurn}
-            setSelecting={setSelecting}
-            setShowDev={setShowDev}
-            setShowTrade={setShowTrade}
-          />
-          {!myTurn && <LastActivity log={game.log} />}
         </section>
         {/* Right: build-cost reference. */}
         <section className="swipe-page costs-page">

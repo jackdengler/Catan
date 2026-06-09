@@ -42,8 +42,7 @@ export function TeamBadge({ color, size = 22 }: { color: PlayerColor; size?: num
         src={asset(logo)}
         alt={TEAM_LABELS[color]}
         title={TEAM_LABELS[color]}
-        width={size}
-        height={size}
+        style={{ height: size, width: "auto", maxWidth: size * 2.2 }}
         onError={() => setImgFailed(true)}
       />
     );

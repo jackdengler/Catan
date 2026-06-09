@@ -1837,7 +1837,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .phone-game .mini-scores {
   flex: 0 1 auto;
   overflow-y: auto;
-  touch-action: pan-y;
 }
 
 /* Reference pages keep their own internal scroll; the page itself stays put. */
@@ -1848,7 +1847,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.phone-log, .costs-page { touch-action: pan-y; }
+/* NB: scroll regions keep the default touch-action so a horizontal swipe that
+   starts on them still flips the page (pan-y here used to block that). */
 
 /* Team theme picker */
 .team-label { color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
@@ -1888,8 +1888,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   overflow: hidden;
   padding-top: 2px;
 }
-.info-tab .mini-scores { max-height: 34vh; overflow-y: auto; touch-action: pan-y; }
-.info-tab .phone-log { flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; }
+.info-tab .mini-scores { max-height: 34vh; overflow-y: auto; }
+.info-tab .phone-log { flex: 1; min-height: 0; overflow-y: auto; }
 
 /* Pieces remaining to build */
 .pieces-left { display: flex; gap: 10px; font-weight: 700; font-size: 0.9rem; }
@@ -1904,11 +1904,40 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .hp-label { color: var(--muted); font-size: 0.8rem; }
 .board-actions .pieces-left { font-size: 0.82rem; gap: 8px; }
 
-/* Team logo image (rounded crest) */
+/* Team logo image — show the whole mark on a clean rounded card */
 .team-logo {
-  border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  border-radius: 5px;
+  background: #fff;
+  padding: 1px;
   flex: 0 0 auto;
   box-shadow: var(--shadow-1);
-  background: rgba(255, 255, 255, 0.08);
 }
+
+/* ===================================================================== */
+/* Board page tidy-up: map fills, console pinned to the bottom           */
+/* ===================================================================== */
+.board-page { gap: 0; }
+.board-console {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+.board-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: var(--r);
+  border: 1px solid var(--panel-edge);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  background-color: var(--panel);
+  box-shadow: var(--shadow-1);
+}
+.board-hud .mini-hand { flex: 1 1 auto; gap: 8px; margin: 0; }
+.board-hud-right { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+.board-hud .pieces-left { font-size: 0.85rem; gap: 8px; }
+.board-hud .turn-timer { white-space: nowrap; }
