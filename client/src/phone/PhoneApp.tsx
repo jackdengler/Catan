@@ -6,6 +6,7 @@ import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
 import { BoardPreview } from "../game/Board.js";
+import { ColorblindToggle } from "../game/a11y.js";
 import { soundEnabled, setSoundEnabled } from "../game/feedback.js";
 import { HouseRules } from "../game/HouseRules.js";
 import { PLAYER_FILL } from "../game/theme.js";
@@ -220,6 +221,7 @@ function HostSetup({ onCreated }: { onCreated: (roomCode: string, playerId: stri
         {busy ? "Creating…" : "Create game"}
       </button>
       <p className="muted">Next: add computer players and/or share the room code, then start.</p>
+      <ColorblindToggle />
       <ResumeFromFile />
     </div>
   );

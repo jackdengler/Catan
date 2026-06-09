@@ -9,7 +9,9 @@ import { EventBanner } from "../game/EventBanner.js";
 import { FinalStandings } from "../game/FinalStandings.js";
 import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI } from "../game/theme.js";
-import type { GameStatePublic, Resource } from "@catan/shared";
+import { ColorblindToggle } from "../game/a11y.js";
+import { playDice, playForLog, setTvSound, tvSoundEnabled } from "../game/tvSounds.js";
+import type { GameStatePublic, LogEntry, Resource } from "@catan/shared";
 
 const RES: Resource[] = ["wood", "brick", "sheep", "wheat", "ore"];
 
@@ -68,6 +70,7 @@ function useDiceRoll(game: GameStatePublic) {
 
     const roll = game.dice[0] + game.dice[1];
     setRolling(true);
+    playDice();
     const t1 = setTimeout(() => setRolling(false), 650);
     if (roll === 7) return () => clearTimeout(t1);
 
@@ -81,6 +84,29 @@ function useDiceRoll(game: GameStatePublic) {
   }, [game.dice, game.currentPlayerIndex]);
 
   return { rolling, prod };
+}
+
+// Play a sound for each new major log event (builds, robber, awards, win).
+function useTvSounds(log: LogEntry[]) {
+  const lastId = useRef<number | null>(null);
+  useEffect(() => {
+    let latest: LogEntry | undefined;
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].major) {
+        latest = log[i];
+        break;
+      }
+    }
+    if (!latest) return;
+    if (lastId.current === null) {
+      lastId.current = latest.id; // don't replay history on mount/reconnect
+      return;
+    }
+    if (latest.id > lastId.current) {
+      lastId.current = latest.id;
+      playForLog(latest.text);
+    }
+  }, [log]);
 }
 
 export function TvApp() {
@@ -113,9 +139,30 @@ export function TvApp() {
 
   return (
     <>
-      <FullscreenButton />
+      <div className="tv-corner-controls">
+        <TvSoundButton />
+        <FullscreenButton />
+      </div>
       {!game || game.phase === "lobby" ? <Lobby code={code} lobby={lobby} /> : <TvGame code={code} game={game} />}
     </>
+  );
+}
+
+// Mute/unmute the TV sound effects.
+function TvSoundButton() {
+  const [on, setOn] = useState(tvSoundEnabled());
+  return (
+    <button
+      className="fullscreen-btn"
+      title={on ? "Mute sounds" : "Unmute sounds"}
+      onClick={() => {
+        const next = !on;
+        setTvSound(next);
+        setOn(next);
+      }}
+    >
+      {on ? "🔊" : "🔇"}
+    </button>
   );
 }
 
@@ -284,6 +331,7 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
       </div>
       <p className="muted">A human host can also start from their phone.</p>
       <div className="migration-row">
+        <ColorblindToggle />
         <ImportControl />
       </div>
     </div>
@@ -294,6 +342,7 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
   const current = game.players[game.currentPlayerIndex];
   const winner = game.winner ? game.players.find((p) => p.id === game.winner) : null;
   const { rolling, prod } = useDiceRoll(game);
+  useTvSounds(game.log);
 
   return (
     <div className="tv-game">

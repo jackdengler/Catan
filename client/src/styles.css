@@ -512,12 +512,16 @@ button.tiny {
   object-fit: contain;
 }
 
-/* Fullscreen toggle (board view) */
-.fullscreen-btn {
+/* Corner controls (board view): sound + fullscreen */
+.tv-corner-controls {
   position: fixed;
   top: 10px;
   right: 12px;
   z-index: 60;
+  display: flex;
+  gap: 8px;
+}
+.fullscreen-btn {
   padding: 6px 12px;
   font-size: 0.8rem;
   background: rgba(0, 0, 0, 0.45);
@@ -1364,3 +1368,24 @@ button.ghost.small,
 .pb-name { font-weight: 700; }
 .pb-gain { font-size: 1.05rem; }
 .pb-none { color: var(--muted); }
+
+/* Colorblind toggle */
+.cb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 8px;
+}
+.cb-toggle input { width: 18px; height: 18px; }
+
+/* End-game standings breakdown (override the base grid layout) */
+.standing { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+.standing-main { display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 8px; }
+.st-breakdown {
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding-left: 30px;
+}
