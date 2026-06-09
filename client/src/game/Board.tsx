@@ -96,8 +96,9 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
             <polygon
               points={pts}
               fill={TERRAIN_FILL[h.terrain]}
-              stroke="#0d3b16"
-              strokeWidth={2}
+              stroke="#0b2a36"
+              strokeWidth={1.6}
+              strokeLinejoin="round"
             />
             {h.numberToken !== null && (
               <g pointerEvents="none">

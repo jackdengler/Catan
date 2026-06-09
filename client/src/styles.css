@@ -1,11 +1,27 @@
 :root {
-  --bg: #11212d;
-  --panel: #1b2f3e;
-  --panel-2: #24435a;
-  --text: #eaf2f8;
-  --muted: #9fb4c4;
-  --accent: #ffce3a;
-  --sea: #2a6f8e;
+  --bg: #0b1a26;
+  --bg-2: #081320;
+  --panel: #15293a;
+  --panel-2: #1f3c52;
+  --panel-edge: rgba(255, 255, 255, 0.07);
+  --text: #eef5fb;
+  --muted: #9bb2c4;
+  --accent: #ffc94d;
+  --accent-2: #ffb01f;
+  --accent-ink: #2a1a05;
+  --sea: #2c7da0;
+  --good: #4cc38a;
+  --bad: #ec6a5e;
+
+  --r-sm: 9px;
+  --r: 13px;
+  --r-lg: 18px;
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 14px 40px rgba(0, 0, 0, 0.5);
+  --grad-accent: linear-gradient(135deg, #ffd766, #f5a623);
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Outfit", "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 * {
@@ -17,43 +33,73 @@ body,
 #root {
   margin: 0;
   height: 100%;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: var(--bg);
+  font-family: var(--font);
   color: var(--text);
+  background:
+    radial-gradient(1200px 800px at 75% -10%, rgba(44, 125, 160, 0.22), transparent 60%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(255, 201, 77, 0.08), transparent 55%),
+    linear-gradient(160deg, var(--bg), var(--bg-2));
+  background-attachment: fixed;
   /* Prevent the browser's pull-to-refresh / bounce while playing. */
   overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 button {
   font: inherit;
+  font-weight: 600;
   cursor: pointer;
-  border: none;
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
   padding: 10px 14px;
   background: var(--panel-2);
   color: var(--text);
-  transition: transform 0.05s ease, filter 0.1s ease;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.06s ease, filter 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
-button:active {
-  transform: scale(0.97);
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
+  box-shadow: none;
 }
 button.primary {
-  background: var(--accent);
-  color: #20140a;
-  font-weight: 700;
+  background: var(--grad-accent);
+  color: var(--accent-ink);
+  font-weight: 800;
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(245, 166, 35, 0.35);
 }
 button.ghost {
-  background: transparent;
-  border: 1px solid var(--panel-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-edge);
+  box-shadow: none;
 }
 button.link {
   background: none;
+  border: none;
+  box-shadow: none;
   color: var(--muted);
   text-decoration: underline;
+}
+button.link:hover:not(:disabled) {
+  color: var(--text);
 }
 button.big {
   padding: 16px;
@@ -79,8 +125,10 @@ button.tiny {
 .board-svg {
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 50% 40%, #2f7fa1, #1c4d63);
-  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 36%, #3a90b3, #1c4d63 70%, #163d50);
+  border-radius: var(--r);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.35);
 }
 
 /* Newly-built pieces pop in; the robber drops onto its new hex. */
@@ -1393,3 +1441,191 @@ button.ghost.small,
 /* Snappier, more forgiving taps on the interactive phone board. */
 .board-svg { touch-action: manipulation; }
 .board-svg .selectable { cursor: pointer; }
+
+/* ===================================================================== */
+/* VISUAL POLISH — depth, glass panels, refined accents (cascade wins)    */
+/* ===================================================================== */
+
+/* Soft, themed scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--panel-2) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--panel-2); border-radius: 8px; }
+
+/* Display headings + gradient title */
+.tv-lobby h1,
+.join-screen h1 {
+  background: linear-gradient(180deg, #ffe19a, #f5a623);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 4px 22px rgba(245, 166, 35, 0.25);
+}
+
+/* A reusable glassy panel look on the main surfaces */
+.hand,
+.status-line,
+.code-box,
+.modal-card,
+.tv-roomcode,
+.bank,
+.score-row,
+.mini-score,
+.roster-item,
+.claim-seat,
+.target,
+.stepper,
+.res-card,
+.mini-hand-item,
+.dev-chip {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  border: 1px solid var(--panel-edge);
+}
+
+.hand,
+.status-line { box-shadow: var(--shadow-2); border-radius: var(--r); }
+.hand { padding: 12px 12px 14px; }
+
+/* Resource cards: a bit of life + press feedback */
+.res-card {
+  background-color: var(--panel-2);
+  border-radius: var(--r-sm);
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  box-shadow: var(--shadow-1);
+}
+.res-card:active { transform: translateY(1px); }
+.res-emoji { font-size: 1.55rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4)); }
+.res-count { color: var(--text); }
+
+/* VP + tag pills */
+.vp-badge,
+.ms-vp,
+.score-vp,
+.st-vp,
+.dice-sum,
+.dice-mini { letter-spacing: -0.01em; }
+.vp-badge {
+  background: var(--grad-accent);
+  color: var(--accent-ink);
+  box-shadow: 0 3px 10px rgba(245, 166, 35, 0.3);
+}
+.host-tag { background: var(--grad-accent); }
+.bot-tag { background: linear-gradient(180deg, #6a8fc4, #4a6fa5); }
+
+/* Action grid / bar: tactile buttons */
+.action-grid button,
+.action-bar button {
+  background-color: var(--panel-2);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--r);
+  min-height: 56px;
+  font-weight: 700;
+}
+.action-grid .end,
+.board-actions .end {
+  background: linear-gradient(180deg, #3a93ba, #256b8a);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+/* Lobby code box + code */
+.code-box { box-shadow: var(--shadow-2); border-radius: var(--r-lg); }
+.code {
+  background: linear-gradient(180deg, #ffe19a, #f5a623);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.qr { box-shadow: var(--shadow-2); border: 4px solid #fff; }
+
+/* Inputs */
+.join-screen input {
+  border: 1px solid var(--panel-edge);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.join-screen input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255, 201, 77, 0.18);
+}
+.swatch { box-shadow: var(--shadow-1), inset 0 0 0 2px rgba(255, 255, 255, 0.15); }
+.swatch.selected { box-shadow: var(--shadow-2), 0 0 0 3px rgba(255, 201, 77, 0.35); }
+
+/* TV side rail + scoreboard */
+.tv-side {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    var(--panel);
+  border-left: 1px solid var(--panel-edge);
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.03);
+}
+.score-row { border-radius: var(--r-sm); box-shadow: var(--shadow-1); }
+.turn-banner {
+  border-radius: var(--r);
+  box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+.turn-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.12));
+  pointer-events: none;
+}
+
+/* Dice: glassy chip with a little glow */
+.dice {
+  background: rgba(8, 18, 28, 0.6);
+  border: 1px solid var(--panel-edge);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(4px);
+}
+.die { filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+
+/* Modal: rounded sheet with a grab handle + soft scrim */
+.modal { background: rgba(4, 10, 16, 0.6); backdrop-filter: blur(2px); }
+.modal-card {
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: var(--shadow-3);
+  border-bottom: none;
+}
+.modal-card::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  margin: -6px auto 6px;
+}
+
+/* Trade panel + tabs */
+.trade-panel { box-shadow: var(--shadow-2); }
+.trade-tabs button.on { box-shadow: 0 3px 10px rgba(245, 166, 35, 0.3); }
+.bank-give.on { box-shadow: 0 0 0 3px rgba(255, 201, 77, 0.3); }
+
+/* Banners + toast */
+.event-banner,
+.production-banner,
+.roll-gain { box-shadow: var(--shadow-3); backdrop-filter: blur(3px); }
+.toast {
+  background: linear-gradient(180deg, #ef7a6f, #d6453a);
+  box-shadow: var(--shadow-3);
+}
+.reconnect-banner {
+  background: linear-gradient(180deg, #d8a32a, #b8860b);
+  box-shadow: var(--shadow-2);
+}
+
+/* End screen card */
+.end-card { box-shadow: var(--shadow-3); border: 1px solid var(--panel-edge); }
+.standing { box-shadow: var(--shadow-1); }
+.standing.is-winner {
+  background-image: linear-gradient(180deg, rgba(255, 201, 77, 0.12), rgba(255, 201, 77, 0));
+}
+
+/* Native controls adopt the theme accent */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+.cb-toggle input { width: 18px; height: 18px; }
