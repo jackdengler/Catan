@@ -101,6 +101,10 @@ export function applyAction(
       return handleCancelTrade(game, actor);
     case "setEmbargo":
       return handleSetEmbargo(game, actor, action.playerId, action.on);
+    case "setColor":
+      // Color/team is only changeable in the lobby (handled by GameHost before
+      // a game exists); once playing it's fixed.
+      return err("You can't change color during the game");
     case "endTurn":
       return handleEndTurn(game, actor);
     default:

@@ -274,6 +274,7 @@ function PhoneLobby({
   hostControls: boolean;
 }) {
   const players = lobby?.players ?? [];
+  const myColor = players.find((p) => p.id === myId)?.color;
   const isHost = players.find((p) => p.id === myId)?.isHost ?? false;
   const canStart = players.length >= 2;
   const full = players.length >= 4;
@@ -304,6 +305,10 @@ function PhoneLobby({
           </div>
         ))}
       </div>
+
+      {myColor && (
+        <ColorPicker value={myColor} onChange={(c) => sendAction({ type: "setColor", color: c })} />
+      )}
 
       {hostControls && lobby?.boardPreview && lobby.robberPreview && (
         <div className="board-preview">

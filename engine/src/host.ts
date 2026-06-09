@@ -251,8 +251,22 @@ export class GameHost {
     return this.game?.pendingTrade?.expiresAt ?? null;
   }
 
+  // Change a lobby player's color/team. Only before the game starts, and only
+  // to a color no one else has taken.
+  setColor(playerId: string, color: PlayerColor): { ok: boolean; message?: string } {
+    if (this.game) return { ok: false, message: "Game already started" };
+    const player = this.players.find((p) => p.id === playerId);
+    if (!player) return { ok: false, message: "Unknown player" };
+    if (this.players.some((p) => p.id !== playerId && p.color === color)) {
+      return { ok: false, message: "That color is taken" };
+    }
+    player.color = color;
+    return { ok: true };
+  }
+
   action(playerId: string, action: Action): { ok: boolean; message?: string } {
     if (action.type === "startGame") return this.start(playerId);
+    if (action.type === "setColor") return this.setColor(playerId, action.color);
     if (!this.game) return { ok: false, message: "Game not started" };
     return applyAction(this.game, playerId, action);
   }

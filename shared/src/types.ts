@@ -272,6 +272,8 @@ export type Action =
   // Refuse (or stop refusing) to trade with a player — their offers to you, and
   // yours to them, are then auto-rejected.
   | { type: "setEmbargo"; playerId: string; on: boolean }
+  // Change your piece color / team theme in the lobby (before the game starts).
+  | { type: "setColor"; color: PlayerColor }
   | { type: "endTurn" };
 
 // ---------------------------------------------------------------------------
