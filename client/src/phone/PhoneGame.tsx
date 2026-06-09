@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   DevCardType,
   GameStatePublic,
+  LogEntry,
   PrivateState,
   Resource,
 } from "@catan/shared";
@@ -10,6 +11,7 @@ import { sendAction } from "../net/socket.js";
 import { Board } from "../game/Board.js";
 import { BuildCosts } from "../game/BuildCosts.js";
 import { EventBanner } from "../game/EventBanner.js";
+import { FinalStandings } from "../game/FinalStandings.js";
 import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, RESOURCE_EMOJI } from "../game/theme.js";
 import {
@@ -45,7 +47,9 @@ export function PhoneGame({ game, me, myId }: Props) {
 
   // Track which swipe page is showing (for the dots indicator).
   const [page, setPage] = useState(0);
+  const [endSeen, setEndSeen] = useState(false);
   const PAGES = ["Play", "Board", "Costs", "Log"];
+  const winner = game.winner ? game.players.find((p) => p.id === game.winner) : null;
 
   // Reset transient UI when the turn or phase changes.
   useEffect(() => {
@@ -263,6 +267,7 @@ export function PhoneGame({ game, me, myId }: Props) {
               </button>
             )}
           </div>
+          <LastActivity log={game.log} />
         </section>
         <section className="swipe-page costs-page">
           <BuildCosts />
@@ -291,7 +296,33 @@ export function PhoneGame({ game, me, myId }: Props) {
       {showTrade && me && (
         <TradeBuilder game={game} me={me} onClose={() => setShowTrade(false)} />
       )}
+
+      {winner && !endSeen && (
+        <div className="end-overlay">
+          <div className="end-card">
+            <div className="end-title">🏆 {winner.name} wins!</div>
+            {winner.id === myId && <div className="end-sub">That's you — nice game.</div>}
+            <FinalStandings game={game} />
+            <button className="ghost big" onClick={() => setEndSeen(true)}>
+              View board
+            </button>
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+function LastActivity({ log }: { log: LogEntry[] }) {
+  const recent = [...log].slice(-3).reverse();
+  return (
+    <div className="last-activity">
+      {recent.map((l) => (
+        <div key={l.id} className={`la-line ${l.major ? "major" : ""}`}>
+          {l.text}
+        </div>
+      ))}
+    </div>
   );
 }
 

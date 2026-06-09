@@ -5,6 +5,7 @@ import { useGame } from "../net/useGame.js";
 import { Board } from "../game/Board.js";
 import { HouseRules } from "../game/HouseRules.js";
 import { EventBanner } from "../game/EventBanner.js";
+import { FinalStandings } from "../game/FinalStandings.js";
 import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI } from "../game/theme.js";
 import type { Resource } from "@catan/shared";
@@ -131,7 +132,8 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
         )}
         {winner && (
           <div className="winner-banner">
-            🏆 {winner.name} wins!
+            <div className="wb-title">🏆 {winner.name} wins!</div>
+            <FinalStandings game={game} />
           </div>
         )}
       </div>

@@ -138,27 +138,128 @@ button.tiny {
 
 /* Event banner */
 .event-banner {
-  position: absolute;
+  position: fixed;
   top: 14px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 45;
-  background: rgba(10, 22, 16, 0.92);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(10, 22, 16, 0.94);
   border: 2px solid var(--accent);
   color: #fff;
   font-weight: 700;
-  padding: 10px 20px;
-  border-radius: 12px;
-  max-width: 90%;
-  text-align: center;
-  animation: bannerIn 2.8s ease forwards;
+  padding: 12px 22px;
+  border-radius: 14px;
+  max-width: 92%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  animation: bannerIn 3s ease forwards;
   pointer-events: none;
 }
+.event-banner.win {
+  animation: bannerWin 6s ease forwards;
+  border-color: #ffd34d;
+  font-size: 1.2rem;
+}
+.eb-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.eb-text {
+  font-size: 1.05rem;
+}
 @keyframes bannerIn {
-  0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
-  8% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  0% { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.9); }
+  8% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   85% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+@keyframes bannerWin {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+  6% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+  12% { transform: translateX(-50%) scale(1); }
+  92% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* Last activity (on the phone board page) */
+.last-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px 0;
+}
+.la-line {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.la-line.major {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Final standings + end screens */
+.standings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.standing {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-2);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.standing.is-winner {
+  outline: 2px solid var(--accent);
+}
+.standing .rank {
+  color: var(--muted);
+  font-weight: 700;
+  width: 18px;
+}
+.st-name {
+  font-weight: 700;
+}
+.st-vp {
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+.end-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.end-card {
+  background: var(--panel);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.end-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent);
+  text-align: center;
+}
+.end-sub {
+  color: var(--muted);
 }
 
 /* Turn timer */
@@ -427,13 +528,22 @@ button.tiny {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 4rem;
+  gap: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 12px;
+  padding: 24px;
+}
+.wb-title {
+  font-size: 3.4rem;
   font-weight: 800;
   color: var(--accent);
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 12px;
+}
+.winner-banner .standings {
+  max-width: 460px;
+  font-size: 1.3rem;
 }
 
 .tv-side {

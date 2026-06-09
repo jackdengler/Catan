@@ -12,10 +12,14 @@ import {
 import { applyAction } from "./actions.js";
 
 function newGame() {
-  return createGame("TEST", [
-    { id: "p1", name: "Alice", color: "red", isHost: true, connected: true },
-    { id: "p2", name: "Bob", color: "blue", isHost: false, connected: true },
-  ]);
+  return createGame(
+    "TEST",
+    [
+      { id: "p1", name: "Alice", color: "red", isHost: true, connected: true },
+      { id: "p2", name: "Bob", color: "blue", isHost: false, connected: true },
+    ],
+    { randomizeOrder: false } // deterministic order for assertions
+  );
 }
 
 describe("geometry", () => {
