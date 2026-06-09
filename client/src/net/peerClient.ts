@@ -32,13 +32,16 @@ export class ClientTransport extends Transport {
     super();
     this.connected = true;
     queueMicrotask(() => this.dispatch("connect"));
-    // If we stop hearing from the host (no state or heartbeat), treat it as a
-    // drop and start trying to reconnect — covers a host tab that was killed.
+    // If we stop hearing from the host for a long time (no state or heartbeat),
+    // silently re-establish the link in the background. We do NOT flip to
+    // "disconnected" here — only a real WebRTC close does that — so a normal
+    // thinking pause (or a host phone briefly throttling its heartbeat timer)
+    // never flashes the reconnect banner.
     setInterval(() => {
-      if (this.joinedOnce && this.connected && Date.now() - this.lastSeen > 7000) {
-        this.handleDrop();
+      if (this.joinedOnce && this.connected && !this.reconnectTimer && Date.now() - this.lastSeen > 15000) {
+        this.connect();
       }
-    }, 2500);
+    }, 4000);
   }
 
   emit(event: OutEvent, ...args: any[]): void {
@@ -56,6 +59,7 @@ export class ClientTransport extends Transport {
 
   private connect(): void {
     if (!this.join) return;
+    this.lastSeen = Date.now(); // reset the liveness clock for this attempt
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

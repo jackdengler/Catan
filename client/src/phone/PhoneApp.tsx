@@ -61,6 +61,30 @@ export function PhoneApp() {
     }
   }, [joined]);
 
+  // When this phone is hosting (play-on-this-phone), keep the screen awake so
+  // the browser doesn't throttle its timers / sleep — which would stall the
+  // heartbeat and freeze the game for everyone.
+  useEffect(() => {
+    if (!hostMode) return;
+    let lock: any = null;
+    const request = async () => {
+      try {
+        lock = await (navigator as any).wakeLock?.request("screen");
+      } catch {
+        /* unsupported — ignore */
+      }
+    };
+    request();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") request();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      lock?.release?.().catch(() => {});
+    };
+  }, [hostMode]);
+
   // Leave the current game: forget this device's player id for the room and
   // reload, which drops back to the enter-room-code screen with a fresh
   // connection (no auto-rejoin).
