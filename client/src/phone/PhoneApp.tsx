@@ -7,6 +7,7 @@ import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
 import { BoardPreview } from "../game/Board.js";
 import { ColorPicker } from "./ColorPicker.js";
+import { TeamBadge } from "../game/TeamBadge.js";
 import { ColorblindToggle } from "../game/a11y.js";
 import { soundEnabled, setSoundEnabled } from "../game/feedback.js";
 import { HouseRules } from "../game/HouseRules.js";
@@ -290,7 +291,7 @@ function PhoneLobby({
       <div className="roster">
         {players.map((p) => (
           <div key={p.id} className="roster-item" style={{ borderColor: PLAYER_FILL[p.color] }}>
-            <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
+            <TeamBadge color={p.color} size={18} />
             {p.name}
             {p.id === myId && <span className="host-tag">you</span>}
             {p.isHost && <span className="host-tag">host</span>}

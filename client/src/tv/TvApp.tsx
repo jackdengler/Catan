@@ -4,6 +4,7 @@ import { socket } from "../net/socket.js";
 import { importHostState } from "../net/hostSave.js";
 import { useGame } from "../net/useGame.js";
 import { Board, BoardPreview } from "../game/Board.js";
+import { TeamBadge } from "../game/TeamBadge.js";
 import { HouseRules } from "../game/HouseRules.js";
 import { EventBanner } from "../game/EventBanner.js";
 import { FinalStandings } from "../game/FinalStandings.js";
@@ -306,7 +307,7 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
       <div className="roster">
         {(lobby?.players ?? []).map((p) => (
           <div key={p.id} className="roster-item" style={{ borderColor: PLAYER_FILL[p.color] }}>
-            <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
+            <TeamBadge color={p.color} size={18} />
             {p.name}
             {p.isHost && <span className="host-tag">host</span>}
             {p.isBot && <span className="bot-tag">bot</span>}
@@ -391,6 +392,7 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
               style={{ borderLeftColor: PLAYER_FILL[p.color] }}
             >
               <span className="score-name" style={{ color: PLAYER_FILL[p.color] }}>
+                <TeamBadge color={p.color} size={20} />
                 {p.name}
                 {!p.connected && <span className="offline"> offline</span>}
               </span>

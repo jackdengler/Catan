@@ -1862,3 +1862,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   box-shadow: var(--shadow-1);
 }
 .team-swatch.selected { outline: 3px solid var(--accent); outline-offset: 1px; transform: translateY(-1px); }
+
+/* Team crest badge (monogram disc) */
+.team-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  box-shadow: var(--shadow-1);
+  flex: 0 0 auto;
+}
+.score-name { display: flex; align-items: center; gap: 6px; }
+.me-id { display: flex; align-items: center; gap: 8px; }

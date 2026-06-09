@@ -21,6 +21,7 @@ import {
   legalSettlements,
 } from "../game/legal.js";
 import { cueDiscard, cueSeven, cueTrade, cueYourTurn } from "../game/feedback.js";
+import { TeamBadge } from "../game/TeamBadge.js";
 import { DiscardPanel } from "./panels/DiscardPanel.js";
 import { TradePanels, IncomingTrade } from "./panels/TradePanels.js";
 import { DevMenu } from "./panels/DevMenu.js";
@@ -468,8 +469,11 @@ function Hand({ game, me, myId }: { game: GameStatePublic; me: PrivateState | nu
   return (
     <div className="hand">
       <div className="hand-head">
-        <span className="me-name" style={{ color: PLAYER_FILL[mePublic?.color ?? "red"] }}>
-          {mePublic?.name}
+        <span className="me-id">
+          <TeamBadge color={mePublic?.color ?? "red"} size={24} />
+          <span className="me-name" style={{ color: PLAYER_FILL[mePublic?.color ?? "red"] }}>
+            {mePublic?.name}
+          </span>
         </span>
         <span className="vp-badge">{vp} VP</span>
       </div>
@@ -514,7 +518,7 @@ function MiniScores({ game, myId }: { game: GameStatePublic; myId: string }) {
         const embargoed = myEmbargoes.includes(p.id);
         return (
           <div key={p.id} className={`mini-score ${p.id === myId ? "self" : ""}`}>
-            <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
+            <TeamBadge color={p.color} size={18} />
             <span className="ms-name">{p.name}</span>
             {p.longestRoad && <span title="Longest Road">🛣️</span>}
             {p.largestArmy && <span title="Largest Army">⚔️</span>}
