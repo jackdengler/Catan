@@ -420,6 +420,7 @@ function bankTradeToward(
 
   for (const want of RESOURCES) {
     if (missing[want] <= 0) continue;
+    if (game.bank[want] < 1) continue; // the bank can't supply this — don't ask
     for (const give of RESOURCES) {
       if (give === want) continue;
       const ratio = bestTradeRatio(game, p.id, give);
