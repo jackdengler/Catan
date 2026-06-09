@@ -10,7 +10,6 @@ import { EventBanner } from "../game/EventBanner.js";
 import { FinalStandings } from "../game/FinalStandings.js";
 import { TurnTimer } from "../game/TurnTimer.js";
 import { PLAYER_FILL, RESOURCE_EMOJI } from "../game/theme.js";
-import { ColorblindToggle } from "../game/a11y.js";
 import { playDice, playForLog, setTvSound, tvSoundEnabled } from "../game/tvSounds.js";
 import type { GameStatePublic, LogEntry, Resource } from "@catan/shared";
 
@@ -332,7 +331,6 @@ function Lobby({ code, lobby }: { code: string | null; lobby: ReturnType<typeof 
       </div>
       <p className="muted">A human host can also start from their phone.</p>
       <div className="migration-row">
-        <ColorblindToggle />
         <ImportControl />
       </div>
     </div>

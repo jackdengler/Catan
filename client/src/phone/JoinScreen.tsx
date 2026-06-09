@@ -2,7 +2,6 @@ import { useState } from "react";
 import { type LobbyPlayer, type PlayerColor } from "@catan/shared";
 import { socket } from "../net/socket.js";
 import { PLAYER_FILL } from "../game/theme.js";
-import { ColorblindToggle } from "../game/a11y.js";
 import { ColorPicker } from "./ColorPicker.js";
 
 interface Props {
@@ -123,7 +122,6 @@ export function JoinScreen({ initialCode, onJoined }: Props) {
       <button className="ghost big" onClick={playOnThisPhone}>
         🎮 Play on this phone (vs bots)
       </button>
-      <ColorblindToggle />
     </div>
   );
 }

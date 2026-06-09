@@ -17,11 +17,7 @@ export const RESOURCE_FILL: Record<Resource, string> = {
   ore: "#7a8c99",
 };
 
-// Two player palettes: the default, and a colorblind-friendlier set (well
-// separated under the common red-green deficiencies). The choice is a per-
-// device preference; toggling it reloads so every view picks up the new colors.
-// Team themes use fixed brand colors (a bright fill + a darker outline), kept
-// the same in both palettes.
+// Team themes use fixed brand colors (a bright fill + a darker outline).
 const TEAM_FILL = {
   steelers: "#ffb612",
   ravens: "#4631a8",
@@ -32,58 +28,24 @@ const TEAM_STROKE = {
   steelers: "#0c0f14",
   ravens: "#15103a",
   orioles: "#0a0a0a",
-  yankees: "#ffffff",
+  yankees: "#0a1f3c",
 } as const;
 
-const DEFAULT_FILL: Record<PlayerColor, string> = {
+// Classic colors remain as a rendering fallback; players choose teams.
+export const PLAYER_FILL: Record<PlayerColor, string> = {
   red: "#e23b3b",
   blue: "#2f7de2",
   white: "#f5f5f5",
   orange: "#f08a24",
   ...TEAM_FILL,
 };
-const DEFAULT_STROKE: Record<PlayerColor, string> = {
+export const PLAYER_STROKE: Record<PlayerColor, string> = {
   red: "#7a1414",
   blue: "#10396f",
   white: "#9a9a9a",
   orange: "#8a4708",
   ...TEAM_STROKE,
 };
-// Vermillion / blue / near-white / yellow — distinguishable for most CVD types.
-const CB_FILL: Record<PlayerColor, string> = {
-  red: "#d55e00",
-  blue: "#0072b2",
-  white: "#f5f5f5",
-  orange: "#f0e442",
-  ...TEAM_FILL,
-};
-const CB_STROKE: Record<PlayerColor, string> = {
-  red: "#8a3c00",
-  blue: "#004c77",
-  white: "#555555",
-  orange: "#8f8400",
-  ...TEAM_STROKE,
-};
-
-const CB_KEY = "catan_colorblind";
-export function colorblindEnabled(): boolean {
-  try {
-    return localStorage.getItem(CB_KEY) === "on";
-  } catch {
-    return false;
-  }
-}
-export function setColorblind(on: boolean): void {
-  try {
-    localStorage.setItem(CB_KEY, on ? "on" : "off");
-  } catch {
-    /* ignore */
-  }
-}
-
-const cb = colorblindEnabled();
-export const PLAYER_FILL: Record<PlayerColor, string> = cb ? CB_FILL : DEFAULT_FILL;
-export const PLAYER_STROKE: Record<PlayerColor, string> = cb ? CB_STROKE : DEFAULT_STROKE;
 
 export const RESOURCE_EMOJI: Record<Resource, string> = {
   wood: "🌲",
