@@ -9,8 +9,28 @@ export type ResourceCount = Record<Resource, number>;
 
 export const RESOURCES: Resource[] = ["wood", "brick", "sheep", "wheat", "ore"];
 
-export type PlayerColor = "red" | "blue" | "white" | "orange";
-export const PLAYER_COLORS: PlayerColor[] = ["red", "blue", "white", "orange"];
+// The four classic piece colors, plus optional team themes a player can pick.
+export type PlayerColor =
+  | "red"
+  | "blue"
+  | "white"
+  | "orange"
+  | "steelers"
+  | "ravens"
+  | "orioles"
+  | "yankees";
+
+export const BASE_COLORS: PlayerColor[] = ["red", "blue", "white", "orange"];
+export const TEAM_COLORS: PlayerColor[] = ["steelers", "ravens", "orioles", "yankees"];
+// Auto-assignment (bots / board) prefers the classic colors first.
+export const PLAYER_COLORS: PlayerColor[] = [...BASE_COLORS, ...TEAM_COLORS];
+
+export const TEAM_LABELS: Record<string, string> = {
+  steelers: "Steelers",
+  ravens: "Ravens",
+  orioles: "Orioles",
+  yankees: "Yankees",
+};
 
 // ---------------------------------------------------------------------------
 // Board geometry. Generated once on the server and shared with all clients so

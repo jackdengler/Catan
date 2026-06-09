@@ -2,6 +2,60 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { BoardLayout, GameStatePublic, PlayerColor } from "@catan/shared";
 import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI, RESOURCE_FILL, TERRAIN_FILL } from "./theme.js";
 
+// Faint decorative motifs that give each tile its terrain character (trees on
+// forest, peaks on mountains, etc.), drawn in a band above the number chit.
+function terrainMarks(cx: number, cy: number, terrain: string) {
+  const xs = [cx - 11, cx, cx + 11];
+  const y = cy - 19;
+  switch (terrain) {
+    case "wood":
+      return xs.map((x, i) => (
+        <g key={i}>
+          <polygon points={`${x},${y - 6} ${x - 4},${y + 3} ${x + 4},${y + 3}`} fill="#1c5a27" />
+          <rect x={x - 0.9} y={y + 3} width={1.8} height={3} fill="#5b3a1a" />
+        </g>
+      ));
+    case "ore":
+      return xs.map((x, i) => (
+        <polygon
+          key={i}
+          points={`${x},${y - 6} ${x - 5},${y + 4} ${x + 5},${y + 4}`}
+          fill="#54636f"
+          stroke="#3a4853"
+          strokeWidth={0.5}
+        />
+      ));
+    case "wheat":
+      return xs.map((x, i) => (
+        <g key={i} stroke="#b8901a" strokeWidth={1.3} strokeLinecap="round">
+          <line x1={x} y1={y - 6} x2={x} y2={y + 4} />
+          <line x1={x} y1={y - 4} x2={x - 3} y2={y - 1} />
+          <line x1={x} y1={y - 4} x2={x + 3} y2={y - 1} />
+          <line x1={x} y1={y} x2={x - 3} y2={y + 3} />
+          <line x1={x} y1={y} x2={x + 3} y2={y + 3} />
+        </g>
+      ));
+    case "brick":
+      return xs.map((x, i) => (
+        <rect key={i} x={x - 5} y={y - 2} width={10} height={5} rx={1} fill="#8e3f23" stroke="#5e2814" strokeWidth={0.6} />
+      ));
+    case "sheep":
+      return xs.map((x, i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx={5} ry={3.7} fill="#f3f3ee" />
+          <circle cx={x + 4} cy={y - 1.2} r={1.8} fill="#42423e" />
+        </g>
+      ));
+    case "desert":
+      return [
+        <path key="d1" d={`M ${cx - 14} ${y + 2} q 7 -6 14 0 q 7 6 14 0`} fill="none" stroke="rgba(120,90,40,0.5)" strokeWidth={1.4} />,
+        <path key="d2" d={`M ${cx - 10} ${y + 8} q 5 -4 10 0 q 5 4 10 0`} fill="none" stroke="rgba(120,90,40,0.35)" strokeWidth={1.2} />,
+      ];
+    default:
+      return null;
+  }
+}
+
 // A non-interactive board for the lobby (preview of the layout to be played).
 export function BoardPreview({ board, robberHex }: { board: BoardLayout; robberHex: string }) {
   const state = {
@@ -84,13 +138,24 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
       <defs>
         {/* Top-light / bottom-shade gloss to give each tile a subtle 3D feel. */}
         <linearGradient id="hexGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.20" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
           <stop offset="45%" stopColor="#ffffff" stopOpacity="0.02" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.24" />
         </linearGradient>
         <radialGradient id="robberBody" cx="0.35" cy="0.3" r="0.9">
           <stop offset="0%" stopColor="#54585c" />
           <stop offset="100%" stopColor="#1c1f22" />
+        </radialGradient>
+        {/* Number chit: a little parchment coin. */}
+        <radialGradient id="chip" cx="0.4" cy="0.34" r="0.8">
+          <stop offset="0%" stopColor="#fbf4df" />
+          <stop offset="70%" stopColor="#efe1bc" />
+          <stop offset="100%" stopColor="#e0cda0" />
+        </radialGradient>
+        {/* Sea depth: darken the water toward the edges. */}
+        <radialGradient id="seaVignette" cx="0.5" cy="0.46" r="0.62">
+          <stop offset="55%" stopColor="#000000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#04131c" stopOpacity="0.55" />
         </radialGradient>
         <filter id="pieceShadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1.4" stdDeviation="1.3" floodColor="#000" floodOpacity="0.45" />
@@ -99,6 +164,9 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
           <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
         </filter>
       </defs>
+
+      {/* Sea vignette for depth (sits behind the land). */}
+      <rect x={0} y={0} width={board.width} height={board.height} fill="url(#seaVignette)" pointerEvents="none" />
 
       {/* Hex tiles */}
       {board.hexes.map((h) => {
@@ -119,11 +187,15 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
               strokeWidth={1.6}
               strokeLinejoin="round"
             />
-            {/* Gloss overlay for tile depth. */}
+            {/* Terrain character + gloss overlay for tile depth. */}
+            <g pointerEvents="none" opacity={0.92}>{terrainMarks(h.x, h.y, h.terrain)}</g>
             <polygon points={pts} fill="url(#hexGloss)" stroke="none" pointerEvents="none" />
             {h.numberToken !== null && (
               <g pointerEvents="none">
-                <circle cx={h.x} cy={h.y} r={16} fill="#f3ead2" stroke="#5b4a2a" filter="url(#tokenShadow)" />
+                <g filter="url(#tokenShadow)">
+                  <circle cx={h.x} cy={h.y} r={16} fill="url(#chip)" stroke="#cab98f" strokeWidth={1.4} />
+                  <circle cx={h.x} cy={h.y} r={13.5} fill="none" stroke="rgba(91,74,42,0.3)" strokeWidth={0.9} />
+                </g>
                 <text
                   x={h.x}
                   y={h.y + 1}
@@ -175,11 +247,16 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
           <g key={port.id} pointerEvents="none">
             {v1 && <line x1={port.x} y1={port.y} x2={v1.x} y2={v1.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
             {v2 && <line x1={port.x} y1={port.y} x2={v2.x} y2={v2.y} stroke="#caa56b" strokeWidth={2} strokeDasharray="2 3" />}
-            <circle cx={port.x} cy={port.y} r={15} fill={fill} stroke="#fff" strokeWidth={1.5} />
-            <text x={port.x} y={port.y - 2} textAnchor="middle" fontSize={10} fill="#fff" fontWeight={800}>
+            {/* a wooden harbour sign with the buoy on top */}
+            <g filter="url(#pieceShadow)">
+              <rect x={port.x - 15} y={port.y - 13} width={30} height={26} rx={7} fill="#6b4a2a" stroke="#3a2614" strokeWidth={1} />
+              <rect x={port.x - 12.5} y={port.y - 11} width={25} height={9} rx={4} fill="#000" opacity={0.12} />
+              <circle cx={port.x} cy={port.y} r={12} fill={fill} stroke="#fff" strokeWidth={1.3} />
+            </g>
+            <text x={port.x} y={port.y - 1.5} textAnchor="middle" fontSize={9.5} fill="#fff" fontWeight={800}>
               {res ? "2:1" : "3:1"}
             </text>
-            <text x={port.x} y={port.y + 9} textAnchor="middle" fontSize={res ? 10 : 8} fill="#fff" fontWeight={700}>
+            <text x={port.x} y={port.y + 8.5} textAnchor="middle" fontSize={res ? 9.5 : 7.5} fill="#fff" fontWeight={700}>
               {res ? RESOURCE_EMOJI[res] : "any"}
             </text>
           </g>
@@ -228,18 +305,12 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         if (!e) return null;
         const c = colorOf(owner);
         return (
-          <line
-            key={eid}
-            className={isNew(eid) ? "piece-new" : undefined}
-            x1={e.x1}
-            y1={e.y1}
-            x2={e.x2}
-            y2={e.y2}
-            stroke={PLAYER_FILL[c]}
-            strokeWidth={8}
-            strokeLinecap="round"
-            style={{ stroke: PLAYER_FILL[c], filter: `drop-shadow(0 0 1px ${PLAYER_STROKE[c]})` }}
-          />
+          <g key={eid} className={isNew(eid) ? "piece-new" : undefined}>
+            {/* dark casing + coloured core = a little wooden road piece */}
+            <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={PLAYER_STROKE[c]} strokeWidth={9} strokeLinecap="round" />
+            <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={PLAYER_FILL[c]} strokeWidth={5.4} strokeLinecap="round" />
+            <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke="#fff" strokeWidth={1.4} strokeLinecap="round" opacity={0.22} />
+          </g>
         );
       })}
 

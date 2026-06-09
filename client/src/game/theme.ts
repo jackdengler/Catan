@@ -20,17 +20,34 @@ export const RESOURCE_FILL: Record<Resource, string> = {
 // Two player palettes: the default, and a colorblind-friendlier set (well
 // separated under the common red-green deficiencies). The choice is a per-
 // device preference; toggling it reloads so every view picks up the new colors.
+// Team themes use fixed brand colors (a bright fill + a darker outline), kept
+// the same in both palettes.
+const TEAM_FILL = {
+  steelers: "#ffb612",
+  ravens: "#4631a8",
+  orioles: "#df4601",
+  yankees: "#1d3f74",
+} as const;
+const TEAM_STROKE = {
+  steelers: "#0c0f14",
+  ravens: "#15103a",
+  orioles: "#0a0a0a",
+  yankees: "#ffffff",
+} as const;
+
 const DEFAULT_FILL: Record<PlayerColor, string> = {
   red: "#e23b3b",
   blue: "#2f7de2",
   white: "#f5f5f5",
   orange: "#f08a24",
+  ...TEAM_FILL,
 };
 const DEFAULT_STROKE: Record<PlayerColor, string> = {
   red: "#7a1414",
   blue: "#10396f",
   white: "#9a9a9a",
   orange: "#8a4708",
+  ...TEAM_STROKE,
 };
 // Vermillion / blue / near-white / yellow — distinguishable for most CVD types.
 const CB_FILL: Record<PlayerColor, string> = {
@@ -38,12 +55,14 @@ const CB_FILL: Record<PlayerColor, string> = {
   blue: "#0072b2",
   white: "#f5f5f5",
   orange: "#f0e442",
+  ...TEAM_FILL,
 };
 const CB_STROKE: Record<PlayerColor, string> = {
   red: "#8a3c00",
   blue: "#004c77",
   white: "#555555",
   orange: "#8f8400",
+  ...TEAM_STROKE,
 };
 
 const CB_KEY = "catan_colorblind";

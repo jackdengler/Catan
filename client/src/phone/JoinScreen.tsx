@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { PLAYER_COLORS, type LobbyPlayer, type PlayerColor } from "@catan/shared";
+import { type LobbyPlayer, type PlayerColor } from "@catan/shared";
 import { socket } from "../net/socket.js";
 import { PLAYER_FILL } from "../game/theme.js";
 import { ColorblindToggle } from "../game/a11y.js";
+import { ColorPicker } from "./ColorPicker.js";
 
 interface Props {
   initialCode: string;
@@ -112,20 +113,7 @@ export function JoinScreen({ initialCode, onJoined }: Props) {
         Your name
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" maxLength={16} />
       </label>
-      <div className="color-pick">
-        Color
-        <div className="swatches">
-          {PLAYER_COLORS.map((c) => (
-            <button
-              key={c}
-              className={`swatch ${color === c ? "selected" : ""}`}
-              style={{ background: PLAYER_FILL[c] }}
-              onClick={() => setColor(c)}
-              aria-label={c}
-            />
-          ))}
-        </div>
-      </div>
+      <ColorPicker value={color} onChange={setColor} />
       {error && <div className="error-msg">{error}</div>}
       <button className="primary big" disabled={busy} onClick={join}>
         {busy ? "Joining…" : "Join game"}

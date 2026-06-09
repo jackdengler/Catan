@@ -1842,5 +1842,23 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 
 /* Reference pages keep their own internal scroll; the page itself stays put. */
 .log-page { height: 100%; }
-.costs-page { height: 100%; }
+/* The costs page is its own scroller, so it must beat the swipe-page lock. */
+.costs-page {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .phone-log, .costs-page { touch-action: pan-y; }
+
+/* Team theme picker */
+.team-label { color: var(--muted); font-size: 0.8rem; margin-top: 8px; }
+.team-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.team-swatch {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  font-weight: 800;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-1);
+}
+.team-swatch.selected { outline: 3px solid var(--accent); outline-offset: 1px; transform: translateY(-1px); }

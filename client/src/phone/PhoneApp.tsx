@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { PLAYER_COLORS, type GameStatePublic, type PlayerColor, type PrivateState, type Resource } from "@catan/shared";
+import { type GameStatePublic, type PlayerColor, type PrivateState, type Resource } from "@catan/shared";
 import { socket, sendAction, isHostPlayRole, hasResumableHostGame, clearHostSave } from "../net/socket.js";
 import { importHostState } from "../net/hostSave.js";
 import { useGame } from "../net/useGame.js";
 import { JoinScreen } from "./JoinScreen.js";
 import { PhoneGame } from "./PhoneGame.js";
 import { BoardPreview } from "../game/Board.js";
+import { ColorPicker } from "./ColorPicker.js";
 import { ColorblindToggle } from "../game/a11y.js";
 import { soundEnabled, setSoundEnabled } from "../game/feedback.js";
 import { HouseRules } from "../game/HouseRules.js";
@@ -203,20 +204,7 @@ function HostSetup({ onCreated }: { onCreated: (roomCode: string, playerId: stri
         Your name
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="You" maxLength={16} />
       </label>
-      <div className="color-pick">
-        Color
-        <div className="swatches">
-          {PLAYER_COLORS.map((c) => (
-            <button
-              key={c}
-              className={`swatch ${color === c ? "selected" : ""}`}
-              style={{ background: PLAYER_FILL[c] }}
-              onClick={() => setColor(c)}
-              aria-label={c}
-            />
-          ))}
-        </div>
-      </div>
+      <ColorPicker value={color} onChange={setColor} />
       <button className="primary big" disabled={busy} onClick={create}>
         {busy ? "Creating…" : "Create game"}
       </button>
