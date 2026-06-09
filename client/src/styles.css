@@ -1693,3 +1693,85 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
   border-color: var(--bad);
   background: rgba(236, 106, 94, 0.16);
 }
+
+/* ===================================================================== */
+/* Board-page actions, full-screen trade offer, tablet/iPad layout       */
+/* ===================================================================== */
+
+/* The board page now carries the full action set, so let the board flex. */
+.board-page { height: calc(100dvh - 92px); gap: 6px; }
+.phone-board-view { flex: 1 1 auto; min-height: 150px; }
+.board-page .action-grid button { min-height: 50px; }
+
+/* Full-screen incoming trade offer */
+.trade-incoming {
+  justify-content: center;
+  min-height: 72vh;
+  gap: 16px;
+}
+.trade-incoming h3 { font-size: 1.4rem; margin: 0; }
+.trade-countdown { color: var(--muted); font-size: 0.85rem; }
+.trade-deal {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+.trade-deal-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--r);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+  background-color: var(--panel);
+  border: 1px solid var(--panel-edge);
+  box-shadow: var(--shadow-2);
+}
+.trade-deal-side.get { border-color: rgba(76, 195, 138, 0.55); }
+.trade-deal-side.give { border-color: rgba(236, 106, 94, 0.55); }
+.tds-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; }
+.tds-res { font-size: 1.4rem; font-weight: 800; }
+.trade-deal-arrow { align-self: center; font-size: 1.5rem; color: var(--accent); }
+.trade-incoming-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+.trade-incoming-actions .decline {
+  background: rgba(236, 106, 94, 0.16);
+  border: 1px solid var(--bad);
+  color: #ffe5e2;
+}
+
+/* Constrain the entry screens so they don't sprawl on wide displays */
+.join-screen { max-width: 460px; margin: 0 auto; width: 100%; }
+
+/* ----- Tablet / iPad: use the extra space, bigger touch targets ----- */
+@media (min-width: 760px) {
+  .phone { max-width: 760px; padding: 18px; }
+  .resources { gap: 10px; }
+  .res-card { padding: 12px 6px; }
+  .res-emoji { font-size: 1.9rem; }
+  .res-count { font-size: 1.5rem; }
+  .me-name { font-size: 1.4rem; }
+  .vp-badge { font-size: 1.05rem; }
+  .action-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .action-grid .end { grid-column: 1 / -1; }
+  .action-grid button { min-height: 64px; font-size: 1.05rem; }
+  .board-page { height: calc(100dvh - 110px); }
+  .mini-score { padding: 8px 14px; font-size: 1.05rem; }
+  .trade-deal, .trade-incoming-actions { max-width: 540px; }
+  .tds-res { font-size: 1.8rem; }
+  .trade-incoming-actions .big { font-size: 1.2rem; padding: 18px; }
+}
+
+/* Large landscape tablets: a touch wider still */
+@media (min-width: 1024px) and (orientation: landscape) {
+  .phone { max-width: 900px; }
+  .board-page { height: calc(100dvh - 120px); }
+}

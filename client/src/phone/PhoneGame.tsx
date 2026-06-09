@@ -22,7 +22,7 @@ import {
 } from "../game/legal.js";
 import { cueDiscard, cueSeven, cueTrade, cueYourTurn } from "../game/feedback.js";
 import { DiscardPanel } from "./panels/DiscardPanel.js";
-import { TradePanels } from "./panels/TradePanels.js";
+import { TradePanels, IncomingTrade } from "./panels/TradePanels.js";
 import { DevMenu } from "./panels/DevMenu.js";
 
 interface Props {
@@ -148,6 +148,12 @@ export function PhoneGame({ game, me, myId }: Props) {
     return <DiscardPanel need={discardNeeded} resources={me.resources} />;
   }
 
+  // --- Incoming trade: a pending offer takes over the screen until answered --
+  const incoming = game.pendingTrade;
+  if (incoming && incoming.proposer !== myId && incoming.responses[myId]?.status === "pending") {
+    return <IncomingTrade game={game} me={me} myId={myId} />;
+  }
+
   // --- Robber: choose steal target -----------------------------------------
   if (game.phase === "moveRobber" && myTurn && robberHex) {
     const hex = game.board.hexes.find((h) => h.id === robberHex)!;
@@ -265,18 +271,17 @@ export function PhoneGame({ game, me, myId }: Props) {
           <div className="board-actions">
             <MiniHand me={me} />
             <TurnTimer endsAt={game.turnEndsAt} />
-            {myTurn && game.phase === "roll" && (
-              <button className="primary" onClick={() => sendAction({ type: "rollDice" })}>
-                🎲 Roll
-              </button>
-            )}
-            {myTurn && game.phase === "main" && (
-              <button className="end" onClick={() => sendAction({ type: "endTurn" })}>
-                End turn ⏭
-              </button>
-            )}
           </div>
-          <LastActivity log={game.log} />
+          <TradePanels game={game} me={me} myId={myId} />
+          <TurnActions
+            game={game}
+            me={me}
+            myTurn={myTurn}
+            setSelecting={setSelecting}
+            setShowDev={setShowDev}
+            setShowTrade={setShowTrade}
+          />
+          {!myTurn && <LastActivity log={game.log} />}
         </section>
         <section className="swipe-page costs-page">
           <BuildCosts />
@@ -372,46 +377,17 @@ function PlayPanel({
         )}
       </div>
 
-      {/* Trade negotiation panels (visible to proposer + responders) */}
+      {/* Trade negotiation panel (proposer's status view) */}
       <TradePanels game={game} me={me} myId={myId} />
 
-      {/* Action bar */}
-      {myTurn && game.phase === "roll" && (
-        <div className="action-bar">
-          <button className="primary big" onClick={() => sendAction({ type: "rollDice" })}>
-            🎲 Roll dice
-          </button>
-          {canPlayAnyDev(game, me) && (
-            <button className="ghost" onClick={() => setShowDev(true)}>
-              Play dev card
-            </button>
-          )}
-        </div>
-      )}
-
-      {myTurn && game.phase === "main" && (
-        <div className="action-grid">
-          <button onClick={() => setSelecting("road")} disabled={!affordable(me, "road")}>
-            🛣️ Road
-          </button>
-          <button onClick={() => setSelecting("settlement")} disabled={!affordable(me, "settlement")}>
-            🏠 Settlement
-          </button>
-          <button onClick={() => setSelecting("city")} disabled={!affordable(me, "city")}>
-            🏙️ City
-          </button>
-          <button onClick={() => sendAction({ type: "buyDevCard" })} disabled={!affordable(me, "devCard")}>
-            ✦ Buy dev
-          </button>
-          <button onClick={() => setShowDev(true)} disabled={!canPlayAnyDev(game, me)}>
-            Play dev
-          </button>
-          <button onClick={() => setShowTrade(true)}>🔁 Trade</button>
-          <button className="end" onClick={() => sendAction({ type: "endTurn" })}>
-            End turn ⏭
-          </button>
-        </div>
-      )}
+      <TurnActions
+        game={game}
+        me={me}
+        myTurn={myTurn}
+        setSelecting={setSelecting}
+        setShowDev={setShowDev}
+        setShowTrade={setShowTrade}
+      />
 
       {!myTurn && game.phase !== "moveRobber" && (
         <p className="muted center">Waiting for {current.name}…</p>
@@ -420,6 +396,66 @@ function PlayPanel({
       <MiniScores game={game} myId={myId} />
     </div>
   );
+}
+
+// The turn's action controls (roll, or the full build/trade/dev/end grid).
+// Shared by the Play panel and the Board page so you can play from either.
+function TurnActions({
+  game,
+  me,
+  myTurn,
+  setSelecting,
+  setShowDev,
+  setShowTrade,
+}: {
+  game: GameStatePublic;
+  me: PrivateState | null;
+  myTurn: boolean;
+  setSelecting: (s: Selecting) => void;
+  setShowDev: (b: boolean) => void;
+  setShowTrade: (b: boolean) => void;
+}) {
+  if (!myTurn) return null;
+  if (game.phase === "roll") {
+    return (
+      <div className="action-bar">
+        <button className="primary big" onClick={() => sendAction({ type: "rollDice" })}>
+          🎲 Roll dice
+        </button>
+        {canPlayAnyDev(game, me) && (
+          <button className="ghost" onClick={() => setShowDev(true)}>
+            Play dev card
+          </button>
+        )}
+      </div>
+    );
+  }
+  if (game.phase === "main") {
+    return (
+      <div className="action-grid">
+        <button onClick={() => setSelecting("road")} disabled={!affordable(me, "road")}>
+          🛣️ Road
+        </button>
+        <button onClick={() => setSelecting("settlement")} disabled={!affordable(me, "settlement")}>
+          🏠 Settlement
+        </button>
+        <button onClick={() => setSelecting("city")} disabled={!affordable(me, "city")}>
+          🏙️ City
+        </button>
+        <button onClick={() => sendAction({ type: "buyDevCard" })} disabled={!affordable(me, "devCard")}>
+          ✦ Buy dev
+        </button>
+        <button onClick={() => setShowDev(true)} disabled={!canPlayAnyDev(game, me)}>
+          Play dev
+        </button>
+        <button onClick={() => setShowTrade(true)}>🔁 Trade</button>
+        <button className="end" onClick={() => sendAction({ type: "endTurn" })}>
+          End turn ⏭
+        </button>
+      </div>
+    );
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
