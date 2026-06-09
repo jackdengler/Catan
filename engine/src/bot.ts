@@ -108,6 +108,74 @@ function botEvaluatesTrade(
   return missingSum(after, cost) < missingSum(p.resources, cost);
 }
 
+// From the proposer's side: does giving `give` for `receive` leave it strictly
+// closer to its next build (and is it affordable by both sides)?
+function tradeHelpsProposer(
+  game: InternalGame,
+  proposer: InternalPlayer,
+  give: Record<Resource, number>,
+  receive: Record<Resource, number>,
+  partner: InternalPlayer
+): boolean {
+  if (!canAfford(proposer, give) || !canAfford(partner, receive)) return false;
+  const cost = chooseBuildTarget(game, proposer) ?? COSTS.devCard;
+  const after: Record<Resource, number> = { ...proposer.resources };
+  for (const r of RESOURCES) {
+    after[r] += (receive[r] ?? 0) - (give[r] ?? 0);
+    if (after[r] < 0) return false;
+  }
+  return missingSum(after, cost) < missingSum(proposer.resources, cost);
+}
+
+// Pick the responder a bot proposer should trade with: a plain acceptance of the
+// original terms, or a counter whose terms still help. Returns the partner id.
+function bestTradePartner(
+  game: InternalGame,
+  proposer: InternalPlayer,
+  trade: InternalGame["pendingTrade"]
+): string | null {
+  if (!trade) return null;
+  for (const [pid, resp] of Object.entries(trade.responses)) {
+    const partner = playerById(game, pid);
+    if (!partner) continue;
+    if (resp.status === "accept") {
+      if (tradeHelpsProposer(game, proposer, trade.give, trade.receive, partner)) return pid;
+    } else if (resp.status === "counter" && resp.give && resp.receive) {
+      if (tradeHelpsProposer(game, proposer, resp.give, resp.receive, partner)) return pid;
+    }
+  }
+  return null;
+}
+
+// When close to a build, offer a 1:1 swap of a surplus resource for the one most
+// needed — only proposed once per turn (gated by botTradedThisTurn).
+function botProposeTrade(game: InternalGame, p: InternalPlayer): Action | null {
+  if (p.botTradedThisTurn) return null;
+  const cost = chooseBuildTarget(game, p);
+  if (!cost) return null;
+  const missing = missingFor(p, cost);
+  const totalMissing = RESOURCES.reduce((s, r) => s + missing[r], 0);
+  if (totalMissing < 1 || totalMissing > 2) return null; // only when nearly there
+
+  const want = RESOURCES.filter((r) => missing[r] > 0).sort((a, b) => missing[b] - missing[a])[0];
+  let giveRes: Resource | null = null;
+  let bestSurplus = 0;
+  for (const r of RESOURCES) {
+    if (r === want) continue;
+    const surplus = p.resources[r] - (cost[r] ?? 0);
+    if (surplus >= 1 && surplus > bestSurplus) {
+      bestSurplus = surplus;
+      giveRes = r;
+    }
+  }
+  if (!giveRes) return null;
+  return {
+    type: "proposeTrade",
+    give: { [giveRes]: 1 } as Partial<Record<Resource, number>>,
+    receive: { [want]: 1 } as Partial<Record<Resource, number>>,
+  };
+}
+
 // Worth playing a knight now if the robber sits on one of our hexes, or if it
 // would win/keep Largest Army.
 function shouldPlayKnight(game: InternalGame, p: InternalPlayer): boolean {
@@ -124,15 +192,27 @@ export function computeBotStep(
 ): { playerId: string; action: Action } | null {
   if (game.phase === "ended") return null;
 
-  // 1. Respond to a pending player-trade: accept only if it helps.
+  // 1. Resolve a pending player-trade.
   if (game.pendingTrade) {
     const trade = game.pendingTrade;
+    // 1a. Responding bots answer first (accept only if it helps).
     for (const p of game.players) {
-      if (p.isBot && trade.responses[p.id]?.status === "pending") {
+      if (p.isBot && p.id !== trade.proposer && trade.responses[p.id]?.status === "pending") {
         const accept = botEvaluatesTrade(game, p, trade.give, trade.receive);
         return { playerId: p.id, action: { type: "respondTrade", accept } };
       }
     }
+    // 1b. A bot proposer accepts the best offer, or cancels once everyone has
+    //     answered (it waits while a human still has a pending response).
+    const proposer = playerById(game, trade.proposer);
+    if (proposer?.isBot) {
+      const partner = bestTradePartner(game, proposer, trade);
+      if (partner) return { playerId: proposer.id, action: { type: "acceptTradeWith", playerId: partner } };
+      const anyPending = Object.values(trade.responses).some((r) => r.status === "pending");
+      if (!anyPending) return { playerId: proposer.id, action: { type: "cancelTrade" } };
+    }
+    // A trade is open and not resolvable by a bot right now — wait.
+    return null;
   }
 
   // 2. Discards owed on a 7.
@@ -312,26 +392,33 @@ function botMain(game: InternalGame, p: InternalPlayer): Action {
     return { type: "playRoadBuilding" };
   }
 
-  // 7. Bank-trade surplus toward the next city/settlement.
+  // 7. Offer a player trade when we're 1–2 resources from a build (cheaper than
+  //    a 4:1 bank trade). Resolved on subsequent steps; we only ask once a turn.
+  if (!game.pendingTrade) {
+    const offer = botProposeTrade(game, p);
+    if (offer) return offer;
+  }
+
+  // 8. Bank-trade surplus toward the next city/settlement.
   const buildCost = chooseBuildTarget(game, p);
   if (buildCost) {
     const trade = bankTradeToward(game, p, buildCost);
     if (trade) return trade;
   }
 
-  // 8. Buy a development card (knights -> largest army, plus victory points).
+  // 9. Buy a development card (knights -> largest army, plus victory points).
   if (canAfford(p, COSTS.devCard) && game.devDeck.length > 0) {
     return { type: "buyDevCard" };
   }
 
-  // 9. If boxed in, convert surplus toward a dev card so resources keep turning
-  //    into progress (and games don't stall).
+  // 10. If boxed in, convert surplus toward a dev card so resources keep turning
+  //     into progress (and games don't stall).
   if (game.devDeck.length > 0) {
     const trade = bankTradeToward(game, p, COSTS.devCard);
     if (trade) return trade;
   }
 
-  // 10. Nothing useful — end the turn.
+  // 11. Nothing useful — end the turn.
   return { type: "endTurn" };
 }
 

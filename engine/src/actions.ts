@@ -573,6 +573,7 @@ function handleProposeTrade(
   const responses: PendingTrade["responses"] = {};
   for (const p of game.players) if (p.id !== actor.id) responses[p.id] = { status: "pending" };
 
+  actor.botTradedThisTurn = true; // (harmless for humans; gates bot re-proposing)
   game.pendingTrade = {
     id: `trade-${Date.now()}`,
     proposer: actor.id,
@@ -679,6 +680,7 @@ function handleEndTurn(game: InternalGame, actor: InternalPlayer): ActionResult 
   game.pendingTrade = null;
   game.freeRoads = 0;
   actor.hasPlayedDevThisTurn = false;
+  actor.botTradedThisTurn = false;
   game.currentPlayerIndex = (game.currentPlayerIndex + 1) % game.players.length;
   game.turnNumber += 1;
   game.hasRolled = false;
@@ -686,6 +688,7 @@ function handleEndTurn(game: InternalGame, actor: InternalPlayer): ActionResult 
   game.phase = "roll";
   const next = currentPlayer(game);
   next.hasPlayedDevThisTurn = false;
+  next.botTradedThisTurn = false;
   armTurnTimer(game);
   addLog(game, `${next.name}'s turn.`, next.id);
   return ok;

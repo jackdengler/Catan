@@ -36,6 +36,7 @@ export interface InternalPlayer {
   devCards: DevCard[];
   playedKnights: number;
   hasPlayedDevThisTurn: boolean;
+  botTradedThisTurn: boolean; // a bot proposes at most one trade per turn
   settlementsLeft: number;
   citiesLeft: number;
   roadsLeft: number;
@@ -114,6 +115,7 @@ export function createGame(
     devCards: [],
     playedKnights: 0,
     hasPlayedDevThisTurn: false,
+    botTradedThisTurn: false,
     settlementsLeft: PIECES.settlements,
     citiesLeft: PIECES.cities,
     roadsLeft: PIECES.roads,
