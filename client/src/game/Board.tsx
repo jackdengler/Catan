@@ -81,6 +81,25 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
       className="board-svg"
       preserveAspectRatio="xMidYMid meet"
     >
+      <defs>
+        {/* Top-light / bottom-shade gloss to give each tile a subtle 3D feel. */}
+        <linearGradient id="hexGloss" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.20" />
+          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.02" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+        </linearGradient>
+        <radialGradient id="robberBody" cx="0.35" cy="0.3" r="0.9">
+          <stop offset="0%" stopColor="#54585c" />
+          <stop offset="100%" stopColor="#1c1f22" />
+        </radialGradient>
+        <filter id="pieceShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1.4" stdDeviation="1.3" floodColor="#000" floodOpacity="0.45" />
+        </filter>
+        <filter id="tokenShadow" x="-60%" y="-60%" width="220%" height="220%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+      </defs>
+
       {/* Hex tiles */}
       {board.hexes.map((h) => {
         const pts = h.corners
@@ -100,9 +119,11 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
               strokeWidth={1.6}
               strokeLinejoin="round"
             />
+            {/* Gloss overlay for tile depth. */}
+            <polygon points={pts} fill="url(#hexGloss)" stroke="none" pointerEvents="none" />
             {h.numberToken !== null && (
               <g pointerEvents="none">
-                <circle cx={h.x} cy={h.y} r={16} fill="#f3ead2" stroke="#5b4a2a" />
+                <circle cx={h.x} cy={h.y} r={16} fill="#f3ead2" stroke="#5b4a2a" filter="url(#tokenShadow)" />
                 <text
                   x={h.x}
                   y={h.y + 1}
@@ -182,11 +203,22 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         />
       )}
 
-      {/* Robber */}
+      {/* Robber — a little pawn with a ground shadow. */}
       {robber && (
         <g key={state.robberHex} className={animate ? "robber-anim" : undefined} pointerEvents="none">
-          <circle cx={robber.x} cy={robber.y - 22} r={11} fill="#222" stroke="#000" />
-          <rect x={robber.x - 9} y={robber.y - 14} width={18} height={20} rx={6} fill="#222" />
+          <ellipse cx={robber.x} cy={robber.y + 9} rx={11} ry={3.5} fill="#000" opacity={0.3} />
+          <g filter="url(#pieceShadow)">
+            <path
+              d={`M ${robber.x - 9} ${robber.y + 7}
+                  Q ${robber.x - 10} ${robber.y - 8} ${robber.x - 4} ${robber.y - 12}
+                  Q ${robber.x} ${robber.y - 15} ${robber.x + 4} ${robber.y - 12}
+                  Q ${robber.x + 10} ${robber.y - 8} ${robber.x + 9} ${robber.y + 7} Z`}
+              fill="url(#robberBody)"
+              stroke="#0c0d0e"
+              strokeWidth={1}
+            />
+            <circle cx={robber.x} cy={robber.y - 16} r={6.5} fill="url(#robberBody)" stroke="#0c0d0e" strokeWidth={1} />
+          </g>
         </g>
       )}
 
@@ -249,24 +281,27 @@ export function Board({ state, selectable = null, highlight, onSelect, animate =
         const cls = isNew(vid) ? "piece-new" : undefined;
         if (b.type === "city") {
           return (
-            <g key={vid} className={cls} pointerEvents="none">
+            <g key={vid} className={cls} pointerEvents="none" filter="url(#pieceShadow)">
               <rect
                 x={v.x - 11}
                 y={v.y - 11}
                 width={22}
                 height={22}
-                rx={4}
+                rx={5}
                 fill={PLAYER_FILL[c]}
                 stroke={PLAYER_STROKE[c]}
                 strokeWidth={2}
               />
-              <circle cx={v.x} cy={v.y} r={4} fill={PLAYER_STROKE[c]} />
+              {/* a soft top highlight for a glossy piece */}
+              <rect x={v.x - 8} y={v.y - 8} width={16} height={6} rx={3} fill="#fff" opacity={0.18} />
+              <circle cx={v.x} cy={v.y + 1} r={4} fill={PLAYER_STROKE[c]} />
             </g>
           );
         }
         return (
-          <g key={vid} className={cls} pointerEvents="none">
-            <circle cx={v.x} cy={v.y} r={9} fill={PLAYER_FILL[c]} stroke={PLAYER_STROKE[c]} strokeWidth={2} />
+          <g key={vid} className={cls} pointerEvents="none" filter="url(#pieceShadow)">
+            <circle cx={v.x} cy={v.y} r={9.5} fill={PLAYER_FILL[c]} stroke={PLAYER_STROKE[c]} strokeWidth={2} />
+            <circle cx={v.x - 2.6} cy={v.y - 2.6} r={2.6} fill="#fff" opacity={0.28} />
           </g>
         );
       })}

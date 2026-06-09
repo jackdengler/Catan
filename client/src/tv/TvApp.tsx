@@ -8,7 +8,7 @@ import { HouseRules } from "../game/HouseRules.js";
 import { EventBanner } from "../game/EventBanner.js";
 import { FinalStandings } from "../game/FinalStandings.js";
 import { TurnTimer } from "../game/TurnTimer.js";
-import { PLAYER_FILL, PLAYER_STROKE, RESOURCE_EMOJI } from "../game/theme.js";
+import { PLAYER_FILL, RESOURCE_EMOJI } from "../game/theme.js";
 import { ColorblindToggle } from "../game/a11y.js";
 import { playDice, playForLog, setTvSound, tvSoundEnabled } from "../game/tvSounds.js";
 import type { GameStatePublic, LogEntry, Resource } from "@catan/shared";
@@ -385,8 +385,12 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
 
         <div className="scoreboard">
           {game.players.map((p) => (
-            <div key={p.id} className="score-row" style={{ borderLeftColor: PLAYER_FILL[p.color] }}>
-              <span className="score-name" style={{ color: PLAYER_STROKE[p.color] }}>
+            <div
+              key={p.id}
+              className={`score-row ${p.id === current.id ? "active" : ""}`}
+              style={{ borderLeftColor: PLAYER_FILL[p.color] }}
+            >
+              <span className="score-name" style={{ color: PLAYER_FILL[p.color] }}>
                 {p.name}
                 {!p.connected && <span className="offline"> offline</span>}
               </span>
@@ -397,6 +401,15 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
               <span className="score-vp">{p.victoryPoints} VP</span>
               <span className="score-cards">
                 🂠 {p.resourceTotal} · ✦ {p.devCardTotal} · ⚔️ {p.playedKnights}
+              </span>
+              <span className="score-bar">
+                <span
+                  className="score-bar-fill"
+                  style={{
+                    width: `${Math.min(100, (p.victoryPoints / game.options.targetVictoryPoints) * 100)}%`,
+                    background: PLAYER_FILL[p.color],
+                  }}
+                />
               </span>
             </div>
           ))}
@@ -424,7 +437,24 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
 }
 
 function Die({ n }: { n: number }) {
-  return <span className="die">{["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"][n]}</span>;
+  const m = 0.27, c = 0.5, e = 0.73;
+  const cell: Record<string, [number, number]> = {
+    tl: [m, m], tr: [e, m], ml: [m, c], mr: [e, c], bl: [m, e], br: [e, e], c: [c, c],
+  };
+  const layout: Record<number, string[]> = {
+    1: ["c"], 2: ["tl", "br"], 3: ["tl", "c", "br"], 4: ["tl", "tr", "bl", "br"],
+    5: ["tl", "tr", "c", "bl", "br"], 6: ["tl", "tr", "ml", "mr", "bl", "br"],
+  };
+  return (
+    <svg className="die" width={46} height={46} viewBox="0 0 1 1">
+      <rect x={0.05} y={0.05} width={0.9} height={0.9} rx={0.16} fill="#f7f3ea" stroke="#cdbfa6" strokeWidth={0.03} />
+      <rect x={0.13} y={0.11} width={0.74} height={0.3} rx={0.12} fill="#ffffff" opacity={0.5} />
+      {(layout[n] ?? []).map((k) => {
+        const [cx, cy] = cell[k];
+        return <circle key={k} cx={cx} cy={cy} r={0.092} fill="#33271b" />;
+      })}
+    </svg>
+  );
 }
 
 // Banner summarising who collected what on the latest roll.

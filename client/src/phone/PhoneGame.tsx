@@ -439,7 +439,7 @@ function Hand({ game, me, myId }: { game: GameStatePublic; me: PrivateState | nu
       </div>
       <div className="resources">
         {RESOURCES.map((r) => (
-          <div key={r} className="res-card">
+          <div key={r} className={`res-card res-${r}`}>
             <span className="res-emoji">{RESOURCE_EMOJI[r]}</span>
             <span className="res-count">{me?.resources[r] ?? 0}</span>
           </div>
