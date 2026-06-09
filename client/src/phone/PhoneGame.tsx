@@ -471,17 +471,34 @@ function MiniHand({ me }: { me: PrivateState | null }) {
 }
 
 function MiniScores({ game, myId }: { game: GameStatePublic; myId: string }) {
+  const myEmbargoes = game.players.find((p) => p.id === myId)?.embargoes ?? [];
   return (
     <div className="mini-scores">
-      {game.players.map((p) => (
-        <div key={p.id} className={`mini-score ${p.id === myId ? "self" : ""}`}>
-          <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
-          <span className="ms-name">{p.name}</span>
-          <span className="ms-vp">{p.victoryPoints}</span>
-          {p.longestRoad && <span title="Longest Road">🛣️</span>}
-          {p.largestArmy && <span title="Largest Army">⚔️</span>}
-        </div>
-      ))}
+      {game.players.map((p) => {
+        const embargoed = myEmbargoes.includes(p.id);
+        return (
+          <div key={p.id} className={`mini-score ${p.id === myId ? "self" : ""}`}>
+            <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
+            <span className="ms-name">{p.name}</span>
+            {p.longestRoad && <span title="Longest Road">🛣️</span>}
+            {p.largestArmy && <span title="Largest Army">⚔️</span>}
+            <span className="ms-vp">{p.victoryPoints}</span>
+            {p.id !== myId && (
+              <button
+                className={`embargo-btn ${embargoed ? "on" : ""}`}
+                title={
+                  embargoed
+                    ? `Lift embargo on ${p.name}`
+                    : `Embargo ${p.name} — auto-reject all trades with them`
+                }
+                onClick={() => sendAction({ type: "setEmbargo", playerId: p.id, on: !embargoed })}
+              >
+                🚫
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

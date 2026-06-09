@@ -117,6 +117,7 @@ export interface PublicPlayer {
   settlementsLeft: number;
   citiesLeft: number;
   roadsLeft: number;
+  embargoes: string[]; // player ids this player refuses to trade with
 }
 
 // Private payload delivered only to the owning player.
@@ -248,6 +249,9 @@ export type Action =
   | { type: "counterTrade"; give: Partial<ResourceCount>; receive: Partial<ResourceCount> }
   | { type: "acceptTradeWith"; playerId: string }
   | { type: "cancelTrade" }
+  // Refuse (or stop refusing) to trade with a player — their offers to you, and
+  // yours to them, are then auto-rejected.
+  | { type: "setEmbargo"; playerId: string; on: boolean }
   | { type: "endTurn" };
 
 // ---------------------------------------------------------------------------

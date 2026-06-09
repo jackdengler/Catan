@@ -99,6 +99,8 @@ export function applyAction(
       return handleAcceptTradeWith(game, actor, action.playerId);
     case "cancelTrade":
       return handleCancelTrade(game, actor);
+    case "setEmbargo":
+      return handleSetEmbargo(game, actor, action.playerId, action.on);
     case "endTurn":
       return handleEndTurn(game, actor);
     default:
@@ -558,6 +560,11 @@ function nonEmpty(c: ResourceCount): boolean {
   return RESOURCES.some((r) => c[r] > 0);
 }
 
+// Two players can't trade if either has embargoed the other.
+function embargoedBetween(a: InternalPlayer, b: InternalPlayer): boolean {
+  return a.embargoes.includes(b.id) || b.embargoes.includes(a.id);
+}
+
 function handleProposeTrade(
   game: InternalGame,
   actor: InternalPlayer,
@@ -570,8 +577,13 @@ function handleProposeTrade(
   if (!nonEmpty(giveC) || !nonEmpty(receiveC)) return err("Offer must give and receive something");
   if (!canAfford(actor, giveC)) return err("You don't have those cards");
 
+  // Players under an embargo (either direction) auto-reject up front, so the
+  // offer never bothers them and the proposer sees them as declined.
   const responses: PendingTrade["responses"] = {};
-  for (const p of game.players) if (p.id !== actor.id) responses[p.id] = { status: "pending" };
+  for (const p of game.players) {
+    if (p.id === actor.id) continue;
+    responses[p.id] = embargoedBetween(actor, p) ? { status: "reject" } : { status: "pending" };
+  }
 
   actor.botTradedThisTurn = true; // (harmless for humans; gates bot re-proposing)
   game.pendingTrade = {
@@ -594,6 +606,8 @@ function handleRespondTrade(
   const trade = game.pendingTrade;
   if (!trade) return err("No active trade");
   if (!(actor.id in trade.responses)) return err("You can't respond to this trade");
+  const proposerP = playerById(game, trade.proposer);
+  if (accept && proposerP && embargoedBetween(actor, proposerP)) return err("Embargo in place");
   // To accept, the responder must actually hold what the proposer wants.
   if (accept && !canAfford(actor, trade.receive)) return err("You don't have those cards");
   trade.responses[actor.id] = { status: accept ? "accept" : "reject" };
@@ -612,6 +626,8 @@ function handleCounterTrade(
   if (!trade) return err("No active trade");
   if (actor.id === trade.proposer) return err("You proposed this trade");
   if (!(actor.id in trade.responses)) return err("You can't respond to this trade");
+  const proposerP = playerById(game, trade.proposer);
+  if (proposerP && embargoedBetween(actor, proposerP)) return err("Embargo in place");
 
   const myGive = cleanCount(giveInput); // what the counter-offerer gives
   const myReceive = cleanCount(receiveInput); // what they want
@@ -646,6 +662,7 @@ function handleAcceptTradeWith(
 
   const partner = playerById(game, partnerId);
   if (!partner) return err("Unknown player");
+  if (embargoedBetween(actor, partner)) return err("Embargo in place");
   if (!canAfford(actor, give)) return err("You no longer have those cards");
   if (!canAfford(partner, receive)) return err("They no longer have those cards");
 
@@ -666,6 +683,33 @@ function handleCancelTrade(game: InternalGame, actor: InternalPlayer): ActionRes
   if (!trade) return err("No active trade");
   if (trade.proposer !== actor.id) return err("Only the proposer can cancel");
   game.pendingTrade = null;
+  return ok;
+}
+
+// Place or lift an embargo against another player. Can be toggled at any time.
+function handleSetEmbargo(
+  game: InternalGame,
+  actor: InternalPlayer,
+  targetId: string,
+  on: boolean
+): ActionResult {
+  if (targetId === actor.id) return err("You can't embargo yourself");
+  const target = playerById(game, targetId);
+  if (!target) return err("Unknown player");
+  const has = actor.embargoes.includes(targetId);
+  if (on && !has) {
+    actor.embargoes.push(targetId);
+    addLog(game, `${actor.name} embargoed ${target.name}.`, actor.id, true);
+    // An open offer between the two is immediately void.
+    const t = game.pendingTrade;
+    if (t && (t.proposer === actor.id || t.proposer === targetId)) {
+      const other = t.proposer === actor.id ? targetId : actor.id;
+      if (t.responses[other]) t.responses[other] = { status: "reject" };
+    }
+  } else if (!on && has) {
+    actor.embargoes = actor.embargoes.filter((id) => id !== targetId);
+    addLog(game, `${actor.name} lifted the embargo on ${target.name}.`, actor.id);
+  }
   return ok;
 }
 

@@ -17,6 +17,13 @@ function canAfford(me: PrivateState | null, c?: ResourceCount): boolean {
 
 const zero = (): Record<Resource, number> => ({ wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 });
 
+// Is there an embargo (either direction) between two players?
+function embargoed(game: GameStatePublic, a: string, b: string): boolean {
+  const pa = game.players.find((p) => p.id === a);
+  const pb = game.players.find((p) => p.id === b);
+  return !!(pa?.embargoes.includes(b) || pb?.embargoes.includes(a));
+}
+
 export function TradePanels({
   game,
   me,
@@ -49,7 +56,9 @@ export function TradePanels({
                   <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
                   <span className="tr-name">{p.name}</span>
                   {resp.status === "pending" && <em>thinking…</em>}
-                  {resp.status === "reject" && <em>declined</em>}
+                  {resp.status === "reject" && (
+                    <em>{embargoed(game, myId, p.id) ? "🚫 embargoed" : "declined"}</em>
+                  )}
                   {resp.status === "accept" && (
                     <>
                       <em>accepted</em>

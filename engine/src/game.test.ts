@@ -400,6 +400,36 @@ describe("trade expiry", () => {
   });
 });
 
+describe("embargo", () => {
+  it("auto-rejects trades between embargoed players, both ways", () => {
+    const game = newGame();
+    game.phase = "main";
+    game.hasRolled = true;
+    game.currentPlayerIndex = 0;
+    const p1 = game.players[0];
+    const p2 = game.players[1];
+    p1.resources = { wood: 2, brick: 0, sheep: 0, wheat: 0, ore: 0 };
+    p2.resources = { wood: 0, brick: 0, sheep: 2, wheat: 0, ore: 0 };
+
+    // p2 embargoes p1.
+    expect(applyAction(game, "p2", { type: "setEmbargo", playerId: "p1", on: true }).ok).toBe(true);
+
+    // p1's offer auto-rejects p2 up front.
+    applyAction(game, "p1", { type: "proposeTrade", give: { wood: 1 }, receive: { sheep: 1 } });
+    expect(game.pendingTrade!.responses["p2"].status).toBe("reject");
+    // p2 cannot accept, and the proposer cannot force a trade with p2.
+    expect(applyAction(game, "p2", { type: "respondTrade", accept: true }).ok).toBe(false);
+    expect(applyAction(game, "p1", { type: "acceptTradeWith", playerId: "p2" }).ok).toBe(false);
+    expect(game.pendingTrade).not.toBeNull();
+
+    // Lift it, and a new offer is pending again.
+    applyAction(game, "p1", { type: "cancelTrade" });
+    expect(applyAction(game, "p2", { type: "setEmbargo", playerId: "p1", on: false }).ok).toBe(true);
+    applyAction(game, "p1", { type: "proposeTrade", give: { wood: 1 }, receive: { sheep: 1 } });
+    expect(game.pendingTrade!.responses["p2"].status).toBe("pending");
+  });
+});
+
 describe("win detection", () => {
   it("ends the game when a player reaches 10 victory points", () => {
     const game = newGame();

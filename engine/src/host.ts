@@ -101,6 +101,11 @@ export class GameHost {
       // drop any stale turn deadline (it re-arms on the next turn).
       game.options = { ...DEFAULT_OPTIONS, ...(game.options ?? {}) };
       game.turnEndsAt = null;
+      // Backfill fields added in newer versions.
+      for (const pl of game.players) {
+        pl.embargoes ??= [];
+        pl.botTradedThisTurn ??= false;
+      }
       host.game = game;
     }
     return host;

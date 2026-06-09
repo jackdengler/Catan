@@ -41,6 +41,7 @@ export interface InternalPlayer {
   citiesLeft: number;
   roadsLeft: number;
   roadLength: number;
+  embargoes: string[]; // player ids this player refuses to trade with
 }
 
 export interface InternalGame {
@@ -120,6 +121,7 @@ export function createGame(
     citiesLeft: PIECES.cities,
     roadsLeft: PIECES.roads,
     roadLength: 0,
+    embargoes: [],
   }));
 
   const bank: ResourceCount = {
@@ -240,6 +242,7 @@ function toPublicPlayer(game: InternalGame, p: InternalPlayer): PublicPlayer {
     settlementsLeft: p.settlementsLeft,
     citiesLeft: p.citiesLeft,
     roadsLeft: p.roadsLeft,
+    embargoes: [...p.embargoes],
   };
 }
 
