@@ -22,8 +22,9 @@ export type PlayerColor =
 
 export const BASE_COLORS: PlayerColor[] = ["red", "blue", "white", "orange"];
 export const TEAM_COLORS: PlayerColor[] = ["steelers", "ravens", "orioles", "yankees"];
-// Auto-assignment (bots / board) prefers the classic colors first.
-export const PLAYER_COLORS: PlayerColor[] = [...BASE_COLORS, ...TEAM_COLORS];
+// Players (and bots) are themed as teams; the classic colors remain only as a
+// rendering fallback.
+export const PLAYER_COLORS: PlayerColor[] = [...TEAM_COLORS];
 
 export const TEAM_LABELS: Record<string, string> = {
   steelers: "Steelers",

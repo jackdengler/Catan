@@ -177,7 +177,7 @@ function SaveButton() {
 // Setup screen for "play on this phone": pick a name + colour, then host a game.
 function HostSetup({ onCreated }: { onCreated: (roomCode: string, playerId: string) => void }) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState<PlayerColor>("red");
+  const [color, setColor] = useState<PlayerColor>("steelers");
   const [busy, setBusy] = useState(false);
 
   const create = () => {

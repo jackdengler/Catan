@@ -125,7 +125,7 @@ export class GameHost {
   private nextColor(preferred?: PlayerColor): PlayerColor {
     const taken = new Set(this.players.map((p) => p.color));
     if (preferred && !taken.has(preferred)) return preferred;
-    return PLAYER_COLORS.find((c) => !taken.has(c)) ?? "red";
+    return PLAYER_COLORS.find((c) => !taken.has(c)) ?? PLAYER_COLORS[0];
   }
 
   // Join a new player, or reconnect an existing one by id.

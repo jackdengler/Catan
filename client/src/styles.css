@@ -1941,3 +1941,22 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
 .board-hud-right { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
 .board-hud .pieces-left { font-size: 0.85rem; gap: 8px; }
 .board-hud .turn-timer { white-space: nowrap; }
+
+/* Teams-only picker (logo-forward) */
+.team-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.team-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 2px solid;
+  border-radius: 12px;
+  background: var(--panel-2);
+  font-weight: 800;
+}
+.team-pick.selected { background: rgba(255, 201, 77, 0.14); outline: 2px solid var(--accent); }
+.team-pick-name { font-size: 0.98rem; }
+
+/* Logos in the TV banners */
+.tb-name { display: flex; align-items: center; gap: 10px; }
+.wb-title { display: flex; align-items: center; gap: 14px; justify-content: center; flex-wrap: wrap; }

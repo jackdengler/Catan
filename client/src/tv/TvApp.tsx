@@ -360,7 +360,10 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
         )}
         {winner && (
           <div className="winner-banner">
-            <div className="wb-title">🏆 {winner.name} wins!</div>
+            <div className="wb-title">
+              <TeamBadge color={winner.color} size={56} />
+              🏆 {winner.name} wins!
+            </div>
             <FinalStandings game={game} />
           </div>
         )}
@@ -373,7 +376,10 @@ function TvGame({ game }: { code: string | null; game: NonNullable<ReturnType<ty
           <ExportButton />
         </div>
         <div className="turn-banner" style={{ background: PLAYER_FILL[current.color] }}>
-          <strong>{current.name}</strong>
+          <div className="tb-name">
+            <TeamBadge color={current.color} size={40} />
+            <strong>{current.name}</strong>
+          </div>
           <span>
             {game.phase === "setup" && "is setting up"}
             {game.phase === "roll" && "to roll"}

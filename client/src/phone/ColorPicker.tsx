@@ -1,7 +1,8 @@
-import { BASE_COLORS, TEAM_COLORS, TEAM_LABELS, type PlayerColor } from "@catan/shared";
-import { PLAYER_FILL } from "../game/theme.js";
+import { TEAM_COLORS, TEAM_LABELS, type PlayerColor } from "@catan/shared";
+import { PLAYER_STROKE } from "../game/theme.js";
+import { TeamBadge } from "../game/TeamBadge.js";
 
-// Pick a classic piece color or a team theme.
+// Pick a team. Each option shows the team's crest/logo and name.
 export function ColorPicker({
   value,
   onChange,
@@ -11,31 +12,17 @@ export function ColorPicker({
 }) {
   return (
     <div className="color-pick">
-      Color
-      <div className="swatches">
-        {BASE_COLORS.map((c) => (
-          <button
-            key={c}
-            className={`swatch ${value === c ? "selected" : ""}`}
-            style={{ background: PLAYER_FILL[c] }}
-            onClick={() => onChange(c)}
-            aria-label={c}
-          />
-        ))}
-      </div>
-      <div className="team-label">or pick a team</div>
-      <div className="team-swatches">
+      Team
+      <div className="team-grid">
         {TEAM_COLORS.map((c) => (
           <button
             key={c}
-            className={`team-swatch ${value === c ? "selected" : ""}`}
-            style={{
-              background: PLAYER_FILL[c],
-              color: c === "steelers" ? "#0c0f14" : "#fff",
-            }}
+            className={`team-pick ${value === c ? "selected" : ""}`}
+            style={{ borderColor: value === c ? "var(--accent)" : PLAYER_STROKE[c] }}
             onClick={() => onChange(c)}
           >
-            {TEAM_LABELS[c]}
+            <TeamBadge color={c} size={34} />
+            <span className="team-pick-name">{TEAM_LABELS[c]}</span>
           </button>
         ))}
       </div>

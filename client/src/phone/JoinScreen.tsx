@@ -20,7 +20,7 @@ interface JoinResult {
 export function JoinScreen({ initialCode, onJoined }: Props) {
   const [code, setCode] = useState(initialCode);
   const [name, setName] = useState("");
-  const [color, setColor] = useState<PlayerColor>("red");
+  const [color, setColor] = useState<PlayerColor>("steelers");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // When the game is already running, the host returns the roster so we can

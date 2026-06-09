@@ -47,7 +47,7 @@ export class RoomManager {
   private nextColor(room: Room, preferred?: PlayerColor): PlayerColor {
     const taken = new Set(room.players.map((p) => p.color));
     if (preferred && !taken.has(preferred)) return preferred;
-    return PLAYER_COLORS.find((c) => !taken.has(c)) ?? "red";
+    return PLAYER_COLORS.find((c) => !taken.has(c)) ?? PLAYER_COLORS[0];
   }
 
   // Join or reconnect. Returns the player id, or an error message.

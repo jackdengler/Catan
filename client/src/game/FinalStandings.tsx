@@ -1,5 +1,5 @@
 import type { GameStatePublic } from "@catan/shared";
-import { PLAYER_FILL } from "./theme.js";
+import { TeamBadge } from "./TeamBadge.js";
 
 // Final standings, sorted by (now-revealed) victory points, with a breakdown of
 // where each player's points came from.
@@ -31,7 +31,7 @@ export function FinalStandings({ game }: { game: GameStatePublic }) {
           <div key={p.id} className={`standing ${p.id === game.winner ? "is-winner" : ""}`}>
             <div className="standing-main">
               <span className="rank">{i + 1}</span>
-              <span className="dot" style={{ background: PLAYER_FILL[p.color] }} />
+              <TeamBadge color={p.color} size={22} />
               <span className="st-name">
                 {p.name}
                 {p.isBot && " 🤖"}
