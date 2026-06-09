@@ -15,7 +15,9 @@ export type HostMessage =
   | { kind: "roster"; players: LobbyPlayer[] }
   | { kind: "lobby"; lobby: LobbyState }
   | { kind: "state"; payload: StatePayload }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string }
+  // Periodic liveness signal so a phone can tell the host is still there.
+  | { kind: "ping" };
 
 // PeerJS ids must be globally unique on the shared broker, so namespace them.
 export function peerIdForRoom(code: string): string {

@@ -18,7 +18,7 @@ function newGame() {
       { id: "p1", name: "Alice", color: "red", isHost: true, connected: true },
       { id: "p2", name: "Bob", color: "blue", isHost: false, connected: true },
     ],
-    { randomizeOrder: false } // deterministic order for assertions
+    { randomizeOrder: false } // deterministic seating for assertions
   );
 }
 
@@ -267,29 +267,16 @@ describe("win detection", () => {
     game.hasRolled = true;
     game.currentPlayerIndex = 0;
     const p1 = game.players[0];
-    // Give p1 four cities (8 VP) by hand, plus resources for one more settlement.
+    // Give p1 five cities by hand (5 x 2 = 10 VP).
     let placed = 0;
     for (const v of game.board.vertices) {
-      if (placed >= 4) break;
+      if (placed >= 5) break;
       if (canPlaceSettlement(game, "p1", v.id, false)) {
         game.buildings[v.id] = { type: "city", owner: "p1" };
         placed++;
       }
     }
-    // 4 cities = 8 VP. Add a settlement worth 1 and another -> reach 10 via cities? 8 + need 2 more.
-    // Simplest: add two settlements (2 VP) for a total of 10.
-    let s = 0;
-    for (const v of game.board.vertices) {
-      if (s >= 2) break;
-      if (!game.buildings[v.id] && canPlaceSettlement(game, "p1", v.id, false)) {
-        game.buildings[v.id] = { type: "settlement", owner: "p1" };
-        s++;
-      }
-    }
-    // Trigger a recompute by ending and re-entering — use buyDevCard guard path:
-    // directly call checkWin via a no-op action that recomputes (endTurn requires main).
-    // Instead assert via totalVictoryPoints helper indirectly through a city build.
-    expect(placed).toBe(4);
+    expect(placed).toBe(5);
     // Force a win check through an action: give resources and build a road (calls checkWin).
     p1.resources.wood = 1;
     p1.resources.brick = 1;

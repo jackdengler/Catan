@@ -25,6 +25,8 @@ export class HostTransport extends Transport {
     super();
     this.connected = true;
     queueMicrotask(() => this.dispatch("connect"));
+    // Heartbeat so phones can detect if this host goes away.
+    setInterval(() => this.relay?.pingAll(), 3000);
   }
 
   emit(event: OutEvent, ...args: any[]): void {

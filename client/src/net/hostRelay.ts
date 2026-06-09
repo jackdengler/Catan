@@ -69,6 +69,13 @@ export class HostRelay {
     }
   }
 
+  // Liveness heartbeat to every connected phone.
+  pingAll(): void {
+    for (const conn of this.conns.keys()) {
+      if (conn.open) conn.send({ kind: "ping" });
+    }
+  }
+
   disconnect(conn: RelayConn): void {
     const pid = this.conns.get(conn);
     if (!pid) return;

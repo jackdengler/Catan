@@ -25,11 +25,20 @@ export class ClientTransport extends Transport {
     roster?: LobbyPlayer[];
   }) => void;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastSeen = Date.now();
+  private joinedOnce = false;
 
   constructor() {
     super();
     this.connected = true;
     queueMicrotask(() => this.dispatch("connect"));
+    // If we stop hearing from the host (no state or heartbeat), treat it as a
+    // drop and start trying to reconnect — covers a host tab that was killed.
+    setInterval(() => {
+      if (this.joinedOnce && this.connected && Date.now() - this.lastSeen > 7000) {
+        this.handleDrop();
+      }
+    }, 2500);
   }
 
   emit(event: OutEvent, ...args: any[]): void {
@@ -102,8 +111,12 @@ export class ClientTransport extends Transport {
   }
 
   private onData(msg: HostMessage): void {
+    this.lastSeen = Date.now(); // any message means the host is alive
     switch (msg.kind) {
+      case "ping":
+        break;
       case "joined": {
+        this.joinedOnce = true;
         if (this.join) this.join.playerId = msg.playerId; // remember for reconnects
         if (this.joinCb) {
           this.joinCb({ ok: true, playerId: msg.playerId });

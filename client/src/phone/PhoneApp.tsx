@@ -85,7 +85,7 @@ export function PhoneApp() {
   return (
     <div className="phone">
       {error && <div className="toast">{error}</div>}
-      {!connected && !hostMode && <div className="reconnect-banner">Reconnecting…</div>}
+      {!connected && !hostMode && <ReconnectBanner />}
       <div className="phone-topbar">
         <span className="room-tag">Room {joined.roomCode}</span>
         <button className="leave-btn" onClick={leave}>
@@ -150,6 +150,23 @@ function HostSetup({ onCreated }: { onCreated: (roomCode: string, playerId: stri
         {busy ? "Creating…" : "Create game"}
       </button>
       <p className="muted">Next: add computer players and/or share the room code, then start.</p>
+    </div>
+  );
+}
+
+// Shown while a phone has lost its link to the host. Escalates the message if
+// the host stays gone, so players know the host must reopen the game.
+function ReconnectBanner() {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    const i = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(i);
+  }, []);
+  return (
+    <div className="reconnect-banner">
+      {secs < 12
+        ? "Reconnecting to host…"
+        : "Host hasn't returned — they can reopen the game on their device to continue."}
     </div>
   );
 }
